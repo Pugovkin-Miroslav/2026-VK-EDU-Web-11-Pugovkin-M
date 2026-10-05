@@ -18,12 +18,20 @@
                          alt="VK ответы"
                          class="header-logo">
                 </a>
+                <div>
+                    <input id="value"
+                   name="value"
+                   type="search"
+                   placeholder="Найти вопрос"
+                   required>
+                    <button type="submit" class="btn btn-primary">Задать вопрос</button>
+                </div>
 
-                <form class="header-search">
-                    <label for="value">Поиск:</label>
-                    <input id="value" name="value" type="search" required>
-                    <button type="submit" class="btn btn-primary">Найти</button>
-                </form>
+<!--                <form class="header-search">-->
+<!--                    <label for="value">Поиск:</label>-->
+<!--                    <input id="value" name="value" type="search" required>-->
+<!--                    <button type="submit" class="btn btn-primary">Найти</button>-->
+<!--                </form>-->
 
                 <nav class="header-auth" aria-label="Авторизация">
                     <a href="signup.html" class="btn btn-primary">Register</a>
@@ -33,14 +41,111 @@
         </header>
 
         <div class="content-layout">
-            <main>
-                <div class="main-div">
-                    <p>MAIN</p>
+            <main class="questions">
+                <div class="questions-header">
+                    <h1>Новые вопросы</h1>
+                    <a href="profile.html">Популярные вопросы</a>
+
                 </div>
+
+                <article class="question-card">
+                    <div class="question-author">
+                        <img src="static/img/profile-icon.png"
+                             class="question-avatar">
+
+                        <span>Автор 1</span>
+                    </div>
+
+                    <div class="question-content">
+                        <h2>
+                            <a href="question.html">краткий вопрос 1</a>
+                        </h2>
+
+                        <p>
+                            описание проблемы 1
+                        </p>
+
+                        <div class="question-meta">
+                            <a href="question.html">Ответы: 3</a>
+                            <time datetime="2026-10-05T18:30:00+03:00">
+                                5 октября 2026, 18:30
+                            </time>
+                        </div>
+                        <div class="question-tags">
+                            <a href="tag.html?tag=html" class="badge text-bg-primary">HTML</a>
+                            <a href="tag.html?tag=css" class="badge text-bg-primary">CSS</a>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="question-card">
+                    <div class="question-author">
+                        <img src="static/img/profile-icon.png"
+                             alt="Аватар автора"
+                             class="question-avatar">
+
+                        <span>Автор 2</span>
+                    </div>
+
+                    <div class="question-content">
+                        <h2>
+                            <a href="question.html">краткий вопрос 2</a>
+                        </h2>
+
+                        <p>
+                            описание проблемы 2
+                        </p>
+                        <div class="question-meta">
+                            <a href="question.html">Ответы: 7</a>
+                            <time datetime="2026-10-05T17:00:00+03:00">
+                                5 октября 2026, 17:00
+                            </time>
+                        </div>
+
+                        <div class="question-tags">
+                            <a href="tag.html?tag=python" class="badge text-bg-primary">Python</a>
+                            <a href="tag.html?tag=django" class="badge text-bg-primary">Django</a>
+                        </div>
+                    </div>
+                </article>
+
+                <nav aria-label="Страницы вопросов">
+                    <ul class="pagination mb-0">
+                        <li class="page-item active">
+                            <a href="index.html?page=1"
+                               class="page-link"
+                               aria-current="page">1</a>
+                        </li>
+                        <li class="page-item">
+                            <a href="index.html?page=2" class="page-link">2</a>
+                        </li>
+                        <li class="page-item">
+                            <a href="index.html?page=3" class="page-link">3</a>
+                        </li>
+                    </ul>
+                </nav>
             </main>
 
-            <aside>
-                <p>ASIDE</p>
+            <aside class="sidebar">
+                <section class="sidebar-section">
+                    <h2 class="sidebar-title">Популярные теги</h2>
+
+                    <div class="sidebar-tags">
+                        <a href="tag.html?tag=python" class="badge text-bg-primary">Python</a>
+                        <a href="tag.html?tag=django" class="badge text-bg-primary">Django</a>
+                        <a href="tag.html?tag=html" class="badge text-bg-primary">HTML</a>
+                    </div>
+                </section>
+
+                <section class="sidebar-section">
+                    <h2 class="sidebar-title">Лучшие пользователи</h2>
+
+                    <ol class="sidebar-members">
+                        <li><a href="profile.html">Пользователь 1</a></li>
+                        <li><a href="profile.html">Пользователь 2</a></li>
+                        <li><a href="profile.html">Пользователь 3</a></li>
+                    </ol>
+                </section>
             </aside>
         </div>
 
