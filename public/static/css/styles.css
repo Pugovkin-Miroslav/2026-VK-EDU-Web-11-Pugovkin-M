@@ -297,3 +297,24 @@ footer{
     height: 20px;
     object-fit: contain;
 }
+
+.header-user {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    justify-self: end;
+}
+
+.header-avatar {
+    width: 45px;
+    height: 45px;
+    object-fit: cover;
+    border-radius: 50%;
+}
+
+.header-user-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    font-size: 14px;
+}
