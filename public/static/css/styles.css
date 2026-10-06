@@ -256,3 +256,44 @@ footer{
         flex-basis: auto;
     }
 }
+
+.votes {
+    display: inline-flex;
+    align-items: stretch;
+    height: 36px;
+    border: 1px solid #c5cbd3;
+    border-radius: 5px;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.votes-count {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 40px;
+    padding: 0 8px;
+    background-color: #fff;
+}
+
+.votes-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    padding: 0;
+    border: 0;
+    border-left: 1px solid #c5cbd3;
+    background-color: #fff;
+    cursor: pointer;
+}
+
+.votes-button:hover {s
+    background-color: #edf4fd;
+}
+
+.votes-button img {
+    width: 20px;
+    height: 20px;
+    object-fit: contain;
+}
