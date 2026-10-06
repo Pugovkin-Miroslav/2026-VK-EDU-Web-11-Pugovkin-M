@@ -13,6 +13,8 @@ body{
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+    font-family: sans-serif;
+    background-color: #edf4fd;
 }
 
 main{
@@ -34,11 +36,6 @@ footer{
     align-items: center;
 }
 
-
-.text-default{
-    font-family: sans-serif;
-    background-color: #edf4fd;
-}
 
 .header-search {
   display: flex;
@@ -70,6 +67,7 @@ footer{
     display: flex;
     gap: 10px;
     flex-grow: 1
+
 }
 
 .sign-in-div{
@@ -151,6 +149,14 @@ footer{
 .questions-header {
     display: flex;
     justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.div-title {
+    display: flex;
     align-items: center;
     flex-wrap: wrap;
     gap: 15px;
