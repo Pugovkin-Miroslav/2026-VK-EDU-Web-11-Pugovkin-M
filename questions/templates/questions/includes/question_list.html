@@ -1,5 +1,5 @@
 {% load static %}
-{% for question in questions %}
+{% for question in page_obj %}
     <article class="question-card">
         <div class="question-author">
             <img src="{% static 'core/img/profile-icon.png' %}"

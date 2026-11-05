@@ -1,0 +1,17 @@
+{% if page_obj.has_other_pages %}
+    <nav aria-label="Страницы" class="mb-4">
+        <ul class="pagination">
+            {% for number in page_obj.paginator.page_range %}
+                {% if number == page_obj.number %}
+                    <li class="page-item active">
+                        <span class="page-link" aria-current="page">{{ number }}</span>
+                    </li>
+                {% else %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ number }}">{{ number }}</a>
+                    </li>
+                {% endif %}
+            {% endfor %}
+        </ul>
+    </nav>
+{% endif %}

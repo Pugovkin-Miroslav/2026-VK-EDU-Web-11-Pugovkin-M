@@ -27,7 +27,7 @@
 
     <h2 class="mb-3">Ответы</h2>
 
-    {% for answer in answers %}
+    {% for answer in page_obj %}
         <article class="border rounded p-3 mb-3">
             <img src="{% static 'core/img/profile-icon.png' %}"
                  alt="Аватар автора ответа"
@@ -52,6 +52,8 @@
     {% empty %}
         <p>Ответов пока нет.</p>
     {% endfor %}
+
+    {% include "questions/includes/pagination.html" %}
 
     <form method="post">
         {% csrf_token %}
