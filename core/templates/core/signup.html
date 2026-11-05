@@ -1,0 +1,80 @@
+{% extends "core/base.html" %}
+
+{% block title %}Регистрация{% endblock %}
+
+{% block content %}
+<main class="p-4">
+    <h1 class="mb-4">Регистрация</h1>
+
+    <form>
+        <div class="mb-3">
+            <label for="signup-login" class="form-label">Логин</label>
+            <input type="text"
+                   id="signup-login"
+                   name="login"
+                   class="form-control"
+                   autocomplete="username"
+                   required>
+        </div>
+
+        <div class="mb-3">
+            <label for="signup-email" class="form-label">Email</label>
+            <input type="email"
+                   id="signup-email"
+                   name="email"
+                   class="form-control"
+                   autocomplete="email"
+                   required>
+        </div>
+
+        <div class="mb-3">
+            <label for="signup-name" class="form-label">Имя</label>
+            <input type="text"
+                   id="signup-name"
+                   name="name"
+                   class="form-control"
+                   autocomplete="name"
+                   required>
+        </div>
+
+        <div class="mb-3">
+            <label for="signup-password" class="form-label">Пароль</label>
+            <input type="password"
+                   id="signup-password"
+                   name="password"
+                   class="form-control"
+                   autocomplete="new-password"
+                   required>
+        </div>
+
+        <div class="mb-3">
+            <label for="signup-password-repeat" class="form-label">
+                Повторите пароль
+            </label>
+            <input type="password"
+                   id="signup-password-repeat"
+                   name="password_repeat"
+                   class="form-control"
+                   autocomplete="new-password"
+                   required>
+        </div>
+
+        <div class="mb-3">
+            <label for="signup-avatar" class="form-label">Аватар</label>
+            <input type="file"
+                   id="signup-avatar"
+                   name="avatar"
+                   class="form-control"
+                   accept="image/*">
+        </div>
+
+        <button type="button" class="btn btn-primary">
+            Зарегистрироваться
+        </button>
+
+        <p class="mt-3">
+            Уже есть аккаунт? <a href="login.html">Войти</a>
+        </p>
+    </form>
+</main>
+{% endblock %}
