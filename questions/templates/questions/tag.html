@@ -1,15 +1,8 @@
-{% extends "core/base.html" %}
+{% extends "questions/list.html" %}
 
-{% block title %}Тег: название тега{% endblock %}
+{% block title %}Тег: {{ tag }}{% endblock %}
 
-{% block content %}
-<main class="questions">
-    <div class="questions-header">
-        <h1>Тег: название тега</h1>
-        <a href="profile.html">Популярные вопросы</a>
-
-    </div>
-
-    {% include "questions/includes/question_list.html" %}
-</main>
+{% block list_header %}
+    <h1>Тег: {{ tag }}</h1>
+    <a href="{% url 'questions:hot' %}">Популярные вопросы</a>
 {% endblock %}

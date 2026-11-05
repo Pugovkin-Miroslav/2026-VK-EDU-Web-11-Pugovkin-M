@@ -1,6 +1,6 @@
 {% load static %}
 <header class="container-fluid header-div">
-    <a href="index.html">
+    <a href="{% url 'questions:index' %}">
         <img src="{% static 'core/img/header-logo.png' %}"
              alt="VK ответы"
              class="header-logo">
@@ -16,7 +16,7 @@
         </form>
 
         <div class="header-user">
-            <a href="profile.html">
+            <a href="{% url 'core:profile' %}">
                 <img src="{% static 'core/img/profile-icon.png' %}"
                      alt="Аватар пользователя"
                      class="header-avatar">
@@ -26,8 +26,8 @@
                 <p>Имя пользователя</p>
 
                 <div class="header-user-links">
-                    <a href="profile.html">Настройки</a>
-                    <a href="index.html">Выйти</a>
+                    <a href="{% url 'core:profile' %}">Настройки</a>
+                    <a href="{% url 'questions:index' %}">Выйти</a>
                 </div>
             </div>
         </div>
@@ -38,11 +38,11 @@
                    type="search"
                    placeholder="Найти вопрос"
                    required>
-            <a href="ask.html" class="btn btn-primary">Задать вопрос</a>
+            <a href="{% url 'questions:ask' %}" class="btn btn-primary">Задать вопрос</a>
         </div>
         <nav class="header-auth" aria-label="Авторизация">
-            <a href="signup.html" class="btn btn-primary">Register</a>
-            <a href="login.html" class="btn btn-outline-primary">Log in</a>
+            <a href="{% url 'core:signup' %}" class="btn btn-primary">Register</a>
+            <a href="{% url 'core:login' %}" class="btn btn-outline-primary">Log in</a>
         </nav>
     {% endif %}
 </header>

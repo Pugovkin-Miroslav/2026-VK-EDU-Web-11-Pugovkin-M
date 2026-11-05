@@ -7,7 +7,8 @@
 <main class="p-4">
     <h1 class="mb-4">Настройки пользователя</h1>
 
-    <form>
+    <form method="post">
+        {% csrf_token %}
         <div class="mb-3">
             <label for="profile-login" class="form-label">Логин</label>
             <input type="text"

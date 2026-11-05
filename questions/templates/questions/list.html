@@ -1,0 +1,11 @@
+{% extends "core/base.html" %}
+
+{% block content %}
+<main class="questions">
+    <div class="questions-header">
+        {% block list_header %}{% endblock %}
+    </div>
+
+    {% include "questions/includes/question_list.html" %}
+</main>
+{% endblock %}

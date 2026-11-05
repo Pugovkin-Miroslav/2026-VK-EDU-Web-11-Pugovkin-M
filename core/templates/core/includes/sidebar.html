@@ -3,9 +3,9 @@
         <h2 class="sidebar-title">Популярные теги</h2>
 
         <div class="sidebar-tags">
-            <a href="tag.html?tag=python" class="badge text-bg-primary">Python</a>
-            <a href="tag.html?tag=django" class="badge text-bg-primary">Django</a>
-            <a href="tag.html?tag=html" class="badge text-bg-primary">HTML</a>
+            <a href="{% url 'questions:tag' 'python' %}" class="badge text-bg-primary">Python</a>
+            <a href="{% url 'questions:tag' 'django' %}" class="badge text-bg-primary">Django</a>
+            <a href="{% url 'questions:tag' 'html' %}" class="badge text-bg-primary">HTML</a>
         </div>
     </section>
 
@@ -13,9 +13,9 @@
         <h2 class="sidebar-title">Лучшие пользователи</h2>
 
         <ol class="sidebar-members">
-            <li><a href="profile.html">Пользователь 1</a></li>
-            <li><a href="profile.html">Пользователь 2</a></li>
-            <li><a href="profile.html">Пользователь 3</a></li>
+            <li><a href="{% url 'core:profile' %}">Пользователь 1</a></li>
+            <li><a href="{% url 'core:profile' %}">Пользователь 2</a></li>
+            <li><a href="{% url 'core:profile' %}">Пользователь 3</a></li>
         </ol>
     </section>
 </aside>
