@@ -6,7 +6,7 @@ from .pagination import paginate
 
 
 def index(request):
-    questions = sorted(QUESTIONS, key=lambda question: question['created_at'], reverse=True)
+    questions = sorted(QUESTIONS, key=lambda question: question['id'])
     return render(request, 'questions/index.html', {'page_obj': paginate(questions, request)})
 
 
