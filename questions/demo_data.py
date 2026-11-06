@@ -19,7 +19,7 @@ QUESTIONS = [
         'title': f'Вопрос №{number}',
         'text': f'Описание вопроса №{number}.',
         'author': f'Автор {number}',
-        'created_at': date(2026, 9, 1) + timedelta(days=number),
+        'created_at': date(2026, 10, 6) - timedelta(days=number - 1),
         'rating': number % 13,
         'tags': ('Python', 'Django') if number % 2 else ('HTML', 'CSS'),
         'answer_count': len(ANSWERS.get(number, [])),

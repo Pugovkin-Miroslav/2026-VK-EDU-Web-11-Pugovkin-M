@@ -10,6 +10,7 @@ python -m venv .venv
 .\.venv\Scripts\python.exe manage.py runserver
 ```
 
+
 ## Docker Compose
 
 ```sh
