@@ -1,0 +1,8 @@
+{% extends "questions/list.html" %}
+
+{% block title %}Тег: {{ tag }}{% endblock %}
+
+{% block list_header %}
+    <h1>Тег: {{ tag }}</h1>
+    <a href="{% url 'questions:hot' %}">Популярные вопросы</a>
+{% endblock %}

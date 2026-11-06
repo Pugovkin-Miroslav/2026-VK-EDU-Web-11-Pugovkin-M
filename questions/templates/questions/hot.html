@@ -1,0 +1,8 @@
+{% extends "questions/list.html" %}
+
+{% block title %}Популярные вопросы{% endblock %}
+
+{% block list_header %}
+    <h1>Популярные вопросы</h1>
+    <a href="{% url 'questions:index' %}">Новые вопросы</a>
+{% endblock %}

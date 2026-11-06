@@ -1,0 +1,3 @@
+{% for label in question.tags %}
+    <a href="{% url 'questions:tag' label|lower %}" class="badge text-bg-primary">{{ label }}</a>
+{% endfor %}

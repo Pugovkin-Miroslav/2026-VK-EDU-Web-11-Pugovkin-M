@@ -1,20 +1,20 @@
-# VK ответы - ДЗ 1
+# VK ответы — ДЗ 2
 
-Статическая вёрстка сайта вопросов и ответов.
-Использованы HTML, CSS и Bootstrap.
 
-## Как открыть
+## Локально
 
-Скачайте репозиторий и откройте файл `public/index.html`
-в браузере.
+```powershell
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe manage.py migrate
+.\.venv\Scripts\python.exe manage.py runserver
+```
 
-## Страницы
 
-- `public/index.html` - список вопросов.
-- `public/question.html` - вопрос и ответы.
-- `public/ask.html` - создание вопроса.
-- `public/login.html` - вход.
-- `public/signup.html` - регистрация.
-- `public/profile.html` - настройки пользователя.
-- `public/tag.html` - вопросы по тегу.
-- `public/base.html` - базовая вёрстка страницы.
+## Docker Compose
+
+```sh
+docker compose up --build
+```
+
+Сайт доступен по адресу [http://localhost:8000/](http://localhost:8000/).
