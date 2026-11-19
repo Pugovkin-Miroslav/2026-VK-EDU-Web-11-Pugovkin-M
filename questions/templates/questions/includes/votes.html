@@ -1,0 +1,10 @@
+{% load static %}
+<div class="votes">
+    <span class="votes-count">{{ rating }}</span>
+    <button type="button" class="votes-button" aria-label="Лайк">
+        <img src="{% static 'core/img/like.png' %}" alt="">
+    </button>
+    <button type="button" class="votes-button" aria-label="Дизлайк">
+        <img src="{% static 'core/img/dislike.png' %}" alt="">
+    </button>
+</div>

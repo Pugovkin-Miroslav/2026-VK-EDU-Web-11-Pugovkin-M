@@ -1,0 +1,36 @@
+{% load static %}
+{% for question in page_obj %}
+    <article class="question-card">
+        <div class="question-author">
+            <img src="{% static 'core/img/profile-icon.png' %}"
+                 alt=""
+                 class="question-avatar">
+
+            <span>{{ question.author }}</span>
+
+            {% include "questions/includes/votes.html" with rating=question.rating %}
+        </div>
+
+        <div class="question-content">
+            <h2>
+                <a href="{% url 'questions:detail' question.id %}">{{ question.title }}</a>
+            </h2>
+
+            <p>
+                {{ question.text }}
+            </p>
+
+            <div class="question-meta">
+                <a href="{% url 'questions:detail' question.id %}">Ответы: {{ question.answer_count }}</a>
+                <time datetime="{{ question.created_at|date:'Y-m-d' }}">
+                    {{ question.created_at|date:'d.m.Y' }}
+                </time>
+            </div>
+            <div class="question-tags">
+                {% include "questions/includes/tags.html" %}
+            </div>
+        </div>
+    </article>
+{% empty %}
+    <p>Вопросов пока нет.</p>
+{% endfor %}

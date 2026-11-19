@@ -1,0 +1,48 @@
+{% extends "core/base.html" %}
+
+{% block title %}Задать вопрос{% endblock %}
+
+{% block header %}
+    {% include "core/includes/header.html" with show_user=True %}
+{% endblock %}
+
+{% block content %}
+<main class="p-4">
+    <h1 class="mb-4">Задать вопрос</h1>
+
+    <form method="post">
+        {% csrf_token %}
+        <div class="mb-3">
+            <label for="question-title" class="form-label">Заголовок</label>
+            <input type="text"
+                   id="question-title"
+                   name="title"
+                   class="form-control"
+                   maxlength="150"
+                   required>
+        </div>
+
+        <div class="mb-3">
+            <label for="question-text" class="form-label">Текст вопроса</label>
+            <textarea id="question-text"
+                      name="text"
+                      class="form-control"
+                      rows="6"
+                      maxlength="5000"
+                      required></textarea>
+        </div>
+
+        <div class="mb-3">
+            <label for="question-tags" class="form-label">Теги</label>
+            <input type="text"
+                   id="question-tags"
+                   name="tags"
+                   class="form-control"
+                   placeholder="Python, Django"
+                   maxlength="100">
+        </div>
+
+        <button type="button" class="btn btn-primary">Опубликовать</button>
+    </form>
+</main>
+{% endblock %}
