@@ -1,8 +1,16 @@
-from django.shortcuts import render
+from django.shortcuts import redirect, render
+from django.views.decorators.debug import sensitive_post_parameters
+
+from .forms import SignupForm
 
 
+@sensitive_post_parameters('password1', 'password2')
 def signup(request):
-    return render(request, 'core/signup.html')
+    form = SignupForm(request.POST if request.method == 'POST' else None)
+    if form.is_valid():
+        form.save()
+        return redirect('questions:index')
+    return render(request, 'core/signup.html', {'form': form})
 
 
 def profile(request):

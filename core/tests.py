@@ -104,6 +104,76 @@ class LoginLogoutTests(TestCase):
         self.assertNotContains(response, 'href="/signup/"')
 
 
+class SignupTests(TestCase):
+    signup_data = {
+        'username': 'new-reader',
+        'email': 'reader@example.com',
+        'first_name': 'Мария',
+        'password1': 'Lavender-puzzle-93',
+        'password2': 'Lavender-puzzle-93',
+    }
+
+    def test_signup_creates_user_and_one_profile_after_csrf_check(self):
+        client = Client(enforce_csrf_checks=True)
+        url = reverse('core:signup')
+
+        self.assertEqual(client.get(url).status_code, 200)
+        self.assertEqual(client.post(url, self.signup_data).status_code, 403)
+        self.assertFalse(get_user_model().objects.exists())
+
+        response = client.post(url, {
+            **self.signup_data,
+            'csrfmiddlewaretoken': client.cookies['csrftoken'].value,
+        })
+
+        self.assertRedirects(response, '/')
+        user = get_user_model().objects.get(username='new-reader')
+        self.assertEqual(user.email, 'reader@example.com')
+        self.assertEqual(user.first_name, 'Мария')
+        self.assertTrue(user.check_password(self.signup_data['password1']))
+        self.assertEqual(Profile.objects.get().user, user)
+
+    def test_password_validation_displays_errors_and_preserves_input(self):
+        response = self.client.post(reverse('core:signup'), {
+            **self.signup_data, 'password1': '123456', 'password2': '123456',
+        })
+
+        form = response.context.get('form')
+        self.assertIsNotNone(form)
+        self.assertTrue(form.has_error('password2', 'password_too_short'))
+        self.assertTrue(form.has_error('password2', 'password_entirely_numeric'))
+        for error in form['password2'].errors:
+            self.assertContains(response, error)
+        for value in ('new-reader', 'reader@example.com', 'Мария'):
+            self.assertContains(response, f'value="{value}"')
+        self.assertNotContains(response, 'value="123456"')
+        self.assertFalse(get_user_model().objects.exists())
+
+    def test_signup_requires_email_name_and_matching_passwords(self):
+        response = self.client.post(reverse('core:signup'), {
+            **self.signup_data, 'email': '', 'first_name': '', 'password2': 'different',
+        })
+
+        form = response.context.get('form')
+        self.assertIsNotNone(form)
+        self.assertTrue(form.has_error('email', 'required'))
+        self.assertTrue(form.has_error('first_name', 'required'))
+        self.assertTrue(form.has_error('password2', 'password_mismatch'))
+        self.assertFalse(get_user_model().objects.exists())
+
+    def test_signup_rejects_a_taken_username(self):
+        users = get_user_model().objects
+        users.create_user(username='new-reader')
+
+        response = self.client.post(reverse('core:signup'), self.signup_data)
+
+        form = response.context.get('form')
+        self.assertIsNotNone(form)
+        self.assertTrue(form.has_error('username', 'unique'))
+        self.assertEqual(users.count(), 1)
+        self.assertFalse(Profile.objects.exists())
+
+
 class ProfileTests(TestCase):
     def test_user_can_have_only_one_profile(self):
         user = get_user_model().objects.create_user(username='reader')
