@@ -4,7 +4,7 @@
 
 ## Файлы окружения
 
-Скопируй `.env.example` в `.env.local` для запуска Django на компьютере и в `.env.docker` для запуска через Compose.
+Скопируйте `.env.example` в `.env.local` для запуска Django на компьютере и в `.env.docker` для запуска через Compose.
 
 Windows PowerShell
 
@@ -20,10 +20,10 @@ test -f .env.local || cp .env.example .env.local
 test -f .env.docker || cp .env.example .env.docker
 ```
 
-Заполни `DJANGO_SECRET_KEY` и `POSTGRES_PASSWORD` в каждом файле своими значениями. Для нового ключа или пароля можно сгенерировать случайную строку из шестнадцатеричных символов командой `python -c "from secrets import token_hex; print(token_hex(32))"`. Такой формат одинаково читается в обоих файлах.
+Укажите собственные значения `DJANGO_SECRET_KEY` и `POSTGRES_PASSWORD` в каждом файле. Для нового ключа или пароля можно сгенерировать случайную строку из шестнадцатеричных символов командой `python -c "from secrets import token_hex; print(token_hex(32))"`. Такой формат одинаково читается в обоих файлах.
 
-- В `.env.docker` задай `DB_HOST=db` и `DB_PORT=5432`. Compose подставляет настройки из файла, указанного через `--env-file`.
-- В `.env.local` оставь `DB_HOST=127.0.0.1` и укажи порт своего PostgreSQL. Django загружает этот файл автоматически. Переменные, уже заданные в терминале, имеют приоритет.
+- В `.env.docker` задайте `DB_HOST=db` и `DB_PORT=5432`. Compose подставляет настройки из файла, указанного через `--env-file`.
+- В `.env.local` оставьте `DB_HOST=127.0.0.1` и укажите порт PostgreSQL. Django загружает этот файл автоматически. Переменные, уже заданные в терминале, имеют приоритет.
 
 ## Docker Compose
 
@@ -37,13 +37,13 @@ docker compose --env-file .env.docker exec web python manage.py migrate --check
 
 ## Локальный запуск
 
-Нужен Python 3.12 и запущенный PostgreSQL. Создай пользователя и БД по значениям из `.env.local`. Для запуска Django локально с PostgreSQL из Compose можно поднять только сервис базы.
+Для локального запуска требуются Python 3.12 и запущенный PostgreSQL. Создайте пользователя и БД по значениям из `.env.local`. Если Django подключается к PostgreSQL из Compose, достаточно запустить сервис базы.
 
 ```sh
 docker compose --env-file .env.docker up -d --wait db
 ```
 
-В этом случае `POSTGRES_DB`, `POSTGRES_USER` и `POSTGRES_PASSWORD` должны совпадать в обоих файлах. Задай в `.env.local` значение `DB_PORT`, равное `POSTGRES_HOST_PORT` в `.env.docker`. Если порт 5432 уже занят, поменяй `POSTGRES_HOST_PORT`, например на 5433. Внутренний порт в `.env.docker` при этом остаётся 5432.
+В этом случае `POSTGRES_DB`, `POSTGRES_USER` и `POSTGRES_PASSWORD` должны совпадать в обоих файлах. Задайте в `.env.local` значение `DB_PORT`, равное `POSTGRES_HOST_PORT` в `.env.docker`. Если порт 5432 уже занят, измените `POSTGRES_HOST_PORT`, например на 5433. Внутренний порт в `.env.docker` при этом остаётся 5432.
 
 PostgreSQL использует `POSTGRES_DB`, `POSTGRES_USER` и `POSTGRES_PASSWORD` при первом запуске с пустым volume. У уже созданной БД пароль меняется в самом PostgreSQL.
 
@@ -67,10 +67,31 @@ python3.12 -m venv .venv
 
 ## Админка
 
-Для входа в [админку](http://localhost:8000/admin/) создай суперпользователя.
+Для входа в [админку](http://localhost:8000/admin/) создайте суперпользователя.
 
 ```sh
 docker compose --env-file .env.docker exec web python manage.py createsuperuser
 ```
 
-При локальном запуске выполни `python manage.py createsuperuser` в активированном виртуальном окружении.
+При локальном запуске выполните `python manage.py createsuperuser` в активированном виртуальном окружении.
+
+## Наполнение базы тестовыми данными
+
+Для небольшой выборки выполните команду с `ratio=2` после применения миграций.
+
+```sh
+docker compose --env-file .env.docker exec web python manage.py fill_db 2
+```
+
+При локальном запуске выполните `python manage.py fill_db 2` в активированном виртуальном окружении.
+
+Допустимые значения `ratio` начинаются с 2. Если аргумент опущен, используется 10. Каждый запуск добавляет новые записи.
+
+| Сущность | Количество за один запуск |
+| --- | ---: |
+| Пользователи, профили и теги | По `ratio` |
+| Вопросы | `ratio × 10` |
+| Ответы | `ratio × 100` |
+| Лайки вопросов и ответов суммарно | `ratio × 200` |
+
+Для проверки объёма из рубрики укажите `10000`. Для превышения строгих порогов из описания задания укажите `10001`.
