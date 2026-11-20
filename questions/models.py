@@ -5,6 +5,8 @@ from django.db.models.functions import Coalesce
 from django.urls import reverse
 from django.utils import timezone
 
+from .pagination import PAGE_SIZE
+
 
 def _count_related(model, foreign_key):
     counts = (
@@ -139,6 +141,19 @@ class Answer(models.Model):
 
     def __str__(self) -> str:
         return self.text[:80]
+
+    def get_absolute_url(self) -> str:
+        earlier_answers = Answer.objects.filter(question_id=self.question_id).filter(
+            models.Q(created_at__lt=self.created_at)
+            | models.Q(created_at=self.created_at, pk__lt=self.pk)
+        ).count()
+        page = earlier_answers // PAGE_SIZE + 1
+        return reverse(
+            'questions:detail',
+            kwargs={'pk': self.question_id},
+            query={'page': page} if page > 1 else None,
+            fragment=f'answer-{self.pk}',
+        )
 
 
 class QuestionLike(models.Model):

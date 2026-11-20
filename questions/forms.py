@@ -5,7 +5,7 @@ from django import forms
 from django.db import transaction
 from django.utils.text import slugify
 
-from .models import Question, Tag
+from .models import Answer, Question, Tag
 
 
 TAG_NAME_MAX_LENGTH = Tag._meta.get_field('name').max_length
@@ -74,3 +74,18 @@ class QuestionForm(forms.ModelForm):
     def _save_m2m(self):
         names = sorted(self.cleaned_data['tags'], key=str.casefold)
         self.instance.tags.set([_get_or_create_tag(name) for name in names])
+
+
+class AnswerForm(forms.ModelForm):
+    class Meta:
+        model = Answer
+        fields = ('text',)
+        labels = {'text': 'Ваш ответ'}
+        widgets = {'text': forms.Textarea(attrs={
+            'class': 'form-control', 'rows': 5, 'placeholder': 'Введите ответ',
+        })}
+
+    def save(self, commit=True, *, question, author):
+        self.instance.question = question
+        self.instance.author = author
+        return super().save(commit=commit)

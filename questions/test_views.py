@@ -89,6 +89,77 @@ class AskQuestionTests(TestCase):
         self.assertFalse(Tag.objects.exists())
 
 
+class AnswerSubmissionTests(TestCase):
+    answer_text = 'Новый ответ на вопрос'
+
+    @classmethod
+    def setUpTestData(cls):
+        users = get_user_model().objects
+        cls.author = users.create_user(username='question-author')
+        cls.reader = users.create_user(username='answer-author')
+        cls.question = Question.objects.create(title='Вопрос', text='Текст', author=cls.author)
+        cls.url = cls.question.get_absolute_url()
+
+    def add_ten_answers(self, created_at):
+        Answer.objects.bulk_create([
+            Answer(question=self.question, author=self.author, text=f'Ответ {number}', created_at=created_at)
+            for number in range(10)
+        ])
+
+    def test_guest_can_read_question_and_must_log_in_to_answer(self):
+        response = self.client.get(self.url)
+
+        self.assertContains(response, self.question.title)
+        self.assertContains(response, '<fieldset disabled')
+        self.assertContains(response, 'title="Войдите, чтобы ответить"')
+        self.assertRedirects(
+            self.client.post(self.url, {'text': self.answer_text}),
+            f'/login/?next={self.url}',
+        )
+        self.assertFalse(Answer.objects.exists())
+
+    def test_post_requires_csrf_and_redirects_to_answer_on_second_page(self):
+        self.add_ten_answers(timezone.now() - timedelta(days=1))
+        client = Client(enforce_csrf_checks=True)
+        client.force_login(self.reader)
+        data = {'text': self.answer_text}
+
+        self.assertEqual(client.get(self.url).status_code, 200)
+        self.assertEqual(client.post(self.url, data).status_code, 403)
+        response = client.post(self.url, {
+            **data, 'csrfmiddlewaretoken': client.cookies['csrftoken'].value,
+        }, follow=True)
+
+        answer = Answer.objects.filter(question=self.question, author=self.reader).first()
+        self.assertIsNotNone(answer)
+        self.assertEqual(answer.text, self.answer_text)
+        self.assertRedirects(response, f'{self.url}?page=2#answer-{answer.pk}')
+        self.assertContains(response, f'id="answer-{answer.pk}"')
+        self.assertContains(response, self.answer_text)
+
+    def test_redirect_uses_the_new_answers_position_even_if_it_is_on_first_page(self):
+        self.add_ten_answers(timezone.now() + timedelta(days=1))
+        self.client.force_login(self.reader)
+
+        response = self.client.post(f'{self.url}?page=2', {'text': self.answer_text})
+
+        answer = Answer.objects.filter(question=self.question, author=self.reader).first()
+        self.assertIsNotNone(answer)
+        self.assertRedirects(response, f'{self.url}#answer-{answer.pk}')
+
+    def test_empty_answer_displays_error_and_remains_bound(self):
+        self.client.force_login(self.reader)
+
+        response = self.client.post(self.url, {'text': '   '})
+
+        form = response.context.get('form')
+        self.assertIsNotNone(form)
+        self.assertEqual(form['text'].value(), '   ')
+        self.assertTrue(form.has_error('text', 'required'))
+        self.assertContains(response, form['text'].errors[0])
+        self.assertFalse(Answer.objects.exists())
+
+
 class QuestionViewsTests(TestCase):
     @classmethod
     def setUpTestData(cls):
