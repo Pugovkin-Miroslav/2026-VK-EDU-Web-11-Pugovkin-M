@@ -64,3 +64,13 @@ python3.12 -m venv .venv
 ./.venv/bin/python manage.py migrate
 ./.venv/bin/python manage.py runserver
 ```
+
+## Админка
+
+Для входа в [админку](http://localhost:8000/admin/) создай суперпользователя.
+
+```sh
+docker compose --env-file .env.docker exec web python manage.py createsuperuser
+```
+
+При локальном запуске выполни `python manage.py createsuperuser` в активированном виртуальном окружении.
