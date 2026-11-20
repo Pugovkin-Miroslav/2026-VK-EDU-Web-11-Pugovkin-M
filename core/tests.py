@@ -113,7 +113,7 @@ class SignupTests(TestCase):
         'password2': 'Lavender-puzzle-93',
     }
 
-    def test_signup_creates_user_and_one_profile_after_csrf_check(self):
+    def test_signup_creates_user_and_profile_and_starts_session(self):
         client = Client(enforce_csrf_checks=True)
         url = reverse('core:signup')
 
@@ -124,7 +124,7 @@ class SignupTests(TestCase):
         response = client.post(url, {
             **self.signup_data,
             'csrfmiddlewaretoken': client.cookies['csrftoken'].value,
-        })
+        }, follow=True)
 
         self.assertRedirects(response, '/')
         user = get_user_model().objects.get(username='new-reader')
@@ -132,6 +132,7 @@ class SignupTests(TestCase):
         self.assertEqual(user.first_name, 'Мария')
         self.assertTrue(user.check_password(self.signup_data['password1']))
         self.assertEqual(Profile.objects.get().user, user)
+        self.assertEqual(response.wsgi_request.user, user)
 
     def test_password_validation_displays_errors_and_preserves_input(self):
         response = self.client.post(reverse('core:signup'), {
