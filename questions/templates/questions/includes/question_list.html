@@ -1,10 +1,7 @@
-{% load static %}
 {% for question in page_obj %}
     <article class="question-card">
         <div class="question-author">
-            <img src="{% static 'core/img/profile-icon.png' %}"
-                 alt=""
-                 class="question-avatar">
+            {% include "questions/includes/avatar.html" with avatar=question.author.profile.avatar css_class="question-avatar" only %}
 
             <span>{{ question.author }}</span>
 
@@ -13,7 +10,7 @@
 
         <div class="question-content">
             <h2>
-                <a href="{% url 'questions:detail' question.id %}">{{ question.title }}</a>
+                <a href="{{ question.get_absolute_url }}">{{ question.title }}</a>
             </h2>
 
             <p>
@@ -21,7 +18,7 @@
             </p>
 
             <div class="question-meta">
-                <a href="{% url 'questions:detail' question.id %}">Ответы: {{ question.answer_count }}</a>
+                <a href="{{ question.get_absolute_url }}">Ответы: {{ question.answer_count }}</a>
                 <time datetime="{{ question.created_at|date:'Y-m-d' }}">
                     {{ question.created_at|date:'d.m.Y' }}
                 </time>

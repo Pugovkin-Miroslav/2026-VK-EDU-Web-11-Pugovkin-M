@@ -29,7 +29,6 @@ class QuestionAdmin(admin.ModelAdmin):
     list_select_related = ('author',)
     autocomplete_fields = ('author', 'tags')
     show_full_result_count = False
-    view_on_site = False
     inlines = (AnswerInline,)
 
     def get_inlines(self, request, obj=None):

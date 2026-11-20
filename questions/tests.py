@@ -100,11 +100,13 @@ class QuestionAdminTests(TestCase):
         question.refresh_from_db()
         self.assertEqual(question.text, 'Обновлённый текст.')
 
-    def test_question_change_has_no_public_link_until_questions_use_the_database(self):
+    def test_question_change_links_to_its_public_database_record(self):
         url = reverse('admin:questions_question_change', args=[self.question.pk])
         response = self.client.get(url)
 
-        self.assertFalse(response.context['has_absolute_url'])
+        public_page = self.client.get(response.context['absolute_url'], follow=True)
+        self.assertEqual(public_page.request['PATH_INFO'], self.question.get_absolute_url())
+        self.assertContains(public_page, self.question.title)
 
     def test_answer_inline_query_count_does_not_grow_with_answers(self):
         change_url = reverse('admin:questions_question_change', args=[self.question.pk])

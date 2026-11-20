@@ -1,15 +1,11 @@
 {% extends "core/base.html" %}
-{% load static %}
 
 {% block title %}{{ question.title }}{% endblock %}
 
 {% block content %}
 <main class="p-4">
     <article class="border-bottom pb-4 mb-4">
-        <img src="{% static 'core/img/profile-icon.png' %}"
-             alt="Аватар автора"
-             width="60"
-             height="60">
+        {% include "questions/includes/avatar.html" with avatar=question.author.profile.avatar alt="Аватар автора" size=60 only %}
 
         <h1 class="mt-3">{{ question.title }}</h1>
         <p>{{ question.text }}</p>
@@ -29,10 +25,7 @@
 
     {% for answer in page_obj %}
         <article class="border rounded p-3 mb-3">
-            <img src="{% static 'core/img/profile-icon.png' %}"
-                 alt="Аватар автора ответа"
-                 width="50"
-                 height="50">
+            {% include "questions/includes/avatar.html" with avatar=answer.author.profile.avatar alt="Аватар автора ответа" size=50 only %}
 
             <p class="mt-3">{{ answer.text }}</p>
             <p class="text-muted">{{ answer.author }} · {{ answer.created_at|date:'d.m.Y' }}</p>

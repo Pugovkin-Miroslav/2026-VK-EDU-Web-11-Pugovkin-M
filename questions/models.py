@@ -1,13 +1,67 @@
 from django.conf import settings
 from django.db import models
+from django.db.models import Count, OuterRef, Subquery, Value
+from django.db.models.functions import Coalesce
 from django.urls import reverse
 from django.utils import timezone
+
+
+def _count_related(model, foreign_key):
+    counts = (
+        model.objects.filter(**{foreign_key: OuterRef('pk')})
+        .order_by()
+        .values(foreign_key)
+        .annotate(total=Count('*'))
+        .values('total')
+    )
+    return Coalesce(Subquery(counts), Value(0))
+
+
+class TagManager(models.Manager):
+    def popular(self):
+        return (
+            self.annotate(question_count=Count('questions'))
+            .filter(question_count__gt=0)
+            .order_by('-question_count', 'name', 'pk')[:5]
+        )
+
+
+class QuestionManager(models.Manager):
+    def with_card_data(self):
+        return (
+            self.select_related('author__profile')
+            .prefetch_related('tags')
+            .annotate(
+                rating=_count_related(QuestionLike, 'question_id'),
+                answer_count=_count_related(Answer, 'question_id'),
+            )
+        )
+
+    def newest(self):
+        return self.with_card_data().order_by('-created_at', '-pk')
+
+    def popular(self):
+        return self.with_card_data().order_by('-rating', '-created_at', '-pk')
+
+    def for_tag(self, tag):
+        return self.newest().filter(tags=tag)
+
+
+class AnswerManager(models.Manager):
+    def for_question(self, question):
+        return (
+            self.filter(question=question)
+            .select_related('author__profile')
+            .annotate(rating=_count_related(AnswerLike, 'answer_id'))
+            .order_by('created_at', 'pk')
+        )
 
 
 class Tag(models.Model):
     name = models.CharField('название', max_length=80)
     slug = models.SlugField('метка для URL', max_length=80, unique=True)
     created_at = models.DateTimeField('дата создания', default=timezone.now)
+    objects = TagManager()
 
     class Meta:
         verbose_name = 'тег'
@@ -39,6 +93,7 @@ class Question(models.Model):
         blank=True,
         verbose_name='теги',
     )
+    objects = QuestionManager()
 
     class Meta:
         verbose_name = 'вопрос'
@@ -70,6 +125,7 @@ class Answer(models.Model):
         related_name='answers',
         verbose_name='вопрос',
     )
+    objects = AnswerManager()
 
     class Meta:
         verbose_name = 'ответ'
