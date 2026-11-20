@@ -10,4 +10,6 @@ venv
 static
 media
 .env
+.env.local
+.env.docker
 *.log

@@ -9,4 +9,6 @@ __pycache__/
 /static/
 /media/
 .env
+.env.local
+.env.docker
 *.log

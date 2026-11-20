@@ -1,11 +1,29 @@
 from os import getenv
 from pathlib import Path
 
+from django.core.exceptions import ImproperlyConfigured
+from dotenv import load_dotenv
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = getenv('DJANGO_SECRET_KEY', 'django-insecure-local-development')
-DEBUG = True
-ALLOWED_HOSTS = []
+if getenv('DJANGO_ENV') != 'docker':
+    load_dotenv(BASE_DIR / '.env.local')
+
+
+def required_env(name: str) -> str:
+    value = getenv(name)
+    if not value:
+        raise ImproperlyConfigured(f'Set the {name} environment variable.')
+    return value
+
+
+SECRET_KEY = required_env('DJANGO_SECRET_KEY')
+DEBUG = getenv('DJANGO_DEBUG', 'false').strip().lower() in {'1', 'true', 'yes', 'on'}
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in getenv('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+    if host.strip()
+]
 
 
 INSTALLED_APPS = [
@@ -51,8 +69,12 @@ WSGI_APPLICATION = 'application.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': required_env('POSTGRES_DB'),
+        'USER': required_env('POSTGRES_USER'),
+        'PASSWORD': required_env('POSTGRES_PASSWORD'),
+        'HOST': required_env('DB_HOST'),
+        'PORT': required_env('DB_PORT'),
     }
 }
 
