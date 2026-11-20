@@ -1,5 +1,7 @@
-from django.shortcuts import get_object_or_404, render
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import get_object_or_404, redirect, render
 
+from .forms import QuestionForm
 from .models import Answer, Question, Tag
 from .pagination import pagination_context
 
@@ -28,5 +30,12 @@ def detail(request, pk):
     return render(request, 'questions/question.html', {'question': question, **context})
 
 
+@login_required
 def ask(request):
-    return render(request, 'questions/ask.html')
+    form = QuestionForm(
+        request.POST if request.method == 'POST' else None,
+        author=request.user,
+    )
+    if form.is_valid():
+        return redirect(form.save())
+    return render(request, 'questions/ask.html', {'form': form})

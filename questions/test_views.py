@@ -2,7 +2,7 @@ from datetime import timedelta
 
 from django.contrib.auth import get_user_model
 from django.db import connection
-from django.test import TestCase
+from django.test import Client, TestCase
 from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from django.utils import timezone
@@ -26,6 +26,67 @@ class EmptyQuestionViewsTests(TestCase):
         ):
             with self.subTest(path=path):
                 self.assertContains(self.client.get(path), 'Страница не найдена', status_code=404)
+
+
+class AskQuestionTests(TestCase):
+    question_data = {'title': 'Как работает Django?', 'text': 'Текст моего вопроса'}
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.user = get_user_model().objects.create_user(username='question-author')
+
+    def test_guest_sees_disabled_ask_button_and_is_redirected_to_login(self):
+        url = reverse('questions:ask')
+
+        self.assertRedirects(self.client.get(url), '/login/?next=/ask/')
+        self.assertRedirects(self.client.post(url, self.question_data), '/login/?next=/ask/')
+        homepage = self.client.get('/')
+        self.assertContains(homepage, 'title="Войдите, чтобы задать вопрос"')
+        self.assertContains(
+            homepage, '<button type="button" class="btn btn-primary" disabled>Задать вопрос</button>',
+            html=True,
+        )
+        self.assertFalse(Question.objects.exists())
+
+    def test_publish_reuses_tags_and_handles_cyrillic_and_slug_collisions(self):
+        existing_tag = Tag.objects.create(name='Python', slug='python-existing')
+        client = Client(enforce_csrf_checks=True)
+        client.force_login(self.user)
+        url = reverse('questions:ask')
+        data = {**self.question_data, 'tags': ' python, PYTHON, Базы данных, базы данных, C++, C# '}
+
+        self.assertEqual(client.get(url).status_code, 200)
+        self.assertEqual(client.post(url, data).status_code, 403)
+        response = client.post(url, {**data, 'csrfmiddlewaretoken': client.cookies['csrftoken'].value})
+
+        self.assertEqual(response.status_code, 302)
+        question = Question.objects.get()
+        self.assertRedirects(response, question.get_absolute_url())
+        self.assertEqual(question.author, self.user)
+        self.assertEqual(question.title, self.question_data['title'])
+        self.assertEqual(question.text, self.question_data['text'])
+        self.assertIn(existing_tag, question.tags.all())
+        self.assertCountEqual(question.tags.values_list('name', flat=True), [
+            'Python', 'Базы данных', 'C++', 'C#',
+        ])
+        for tag in question.tags.all():
+            self.assertContains(self.client.get(reverse('questions:tag', args=[tag.slug])), question.title)
+
+    def test_invalid_tag_preserves_entered_values_without_creating_records(self):
+        self.client.force_login(self.user)
+        invalid_tag = 'x' * 81
+
+        response = self.client.post(reverse('questions:ask'), {**self.question_data, 'tags': invalid_tag})
+
+        form = response.context.get('form')
+        self.assertIsNotNone(form)
+        self.assertTrue(form.has_error('tags'))
+        self.assertContains(response, form['tags'].errors[0])
+        self.assertContains(response, self.question_data['title'])
+        self.assertContains(response, self.question_data['text'])
+        self.assertContains(response, invalid_tag)
+        self.assertFalse(Question.objects.exists())
+        self.assertFalse(Tag.objects.exists())
 
 
 class QuestionViewsTests(TestCase):

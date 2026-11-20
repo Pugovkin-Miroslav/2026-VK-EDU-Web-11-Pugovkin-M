@@ -94,10 +94,10 @@ class LoginLogoutTests(TestCase):
         self.assertRedirects(response, '/')
         self.assertFalse(self.client.get('/').wsgi_request.user.is_authenticated)
 
-    def test_header_reflects_the_session_even_on_the_ask_page(self):
+    def test_header_reflects_the_session_on_public_pages(self):
         for url in ('/', reverse('questions:ask')):
             with self.subTest(url=url):
-                response = self.client.get(url)
+                response = self.client.get(url, follow=True)
                 self.assertContains(response, 'href="/login/"')
                 self.assertContains(response, 'href="/signup/"')
                 self.assertNotContains(response, 'Выйти')

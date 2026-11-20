@@ -41,7 +41,9 @@
                    type="search"
                    placeholder="Найти вопрос"
                    required>
-            <a href="{% url 'questions:ask' %}" class="btn btn-primary">Задать вопрос</a>
+            <span class="d-inline-block" tabindex="0" title="Войдите, чтобы задать вопрос">
+                <button type="button" class="btn btn-primary" disabled>Задать вопрос</button>
+            </span>
         </div>
         <nav class="header-auth" aria-label="Авторизация">
             <a href="{% url 'core:signup' %}" class="btn btn-primary">Зарегистрироваться</a>
