@@ -1,12 +1,14 @@
 from os import getenv
 from pathlib import Path
+from sys import argv
 
 from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+DJANGO_ENV = getenv('DJANGO_ENV')
 
-if getenv('DJANGO_ENV') != 'docker':
+if DJANGO_ENV != 'docker':
     load_dotenv(BASE_DIR / '.env.local')
 
 
@@ -19,6 +21,7 @@ def required_env(name: str) -> str:
 
 SECRET_KEY = required_env('DJANGO_SECRET_KEY')
 DEBUG = getenv('DJANGO_DEBUG', 'false').strip().lower() in {'1', 'true', 'yes', 'on'}
+DEBUG_TOOLBAR_ENABLED = DEBUG and 'test' not in argv and getenv('PYTEST_VERSION') is None
 ALLOWED_HOSTS = [
     host.strip()
     for host in getenv('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
@@ -46,6 +49,15 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+if DEBUG_TOOLBAR_ENABLED:
+    INSTALLED_APPS.append('debug_toolbar')
+    MIDDLEWARE.insert(0, 'debug_toolbar.middleware.DebugToolbarMiddleware')
+    INTERNAL_IPS = ['127.0.0.1', '::1']
+    if DJANGO_ENV == 'docker':
+        DEBUG_TOOLBAR_CONFIG = {
+            'SHOW_TOOLBAR_CALLBACK': 'debug_toolbar.middleware.show_toolbar_with_docker',
+        }
 
 ROOT_URLCONF = 'application.urls'
 

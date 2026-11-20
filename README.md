@@ -33,7 +33,7 @@ docker compose --env-file .env.docker exec web python manage.py check
 docker compose --env-file .env.docker exec web python manage.py migrate --check
 ```
 
-Сайт доступен по адресу [http://localhost:8000/](http://localhost:8000/). При запуске `web` ждёт готовности PostgreSQL и применяет миграции. Данные PostgreSQL хранятся в именованном volume `postgres_data` и сохраняются после `docker compose --env-file .env.docker down`.
+Сайт доступен на локальном компьютере по адресу [http://localhost:8000/](http://localhost:8000/). При запуске `web` ждёт готовности PostgreSQL и применяет миграции. Данные PostgreSQL хранятся в именованном volume `postgres_data` и сохраняются после `docker compose --env-file .env.docker down`.
 
 ## Локальный запуск
 
@@ -95,3 +95,21 @@ docker compose --env-file .env.docker exec web python manage.py fill_db 2
 | Лайки вопросов и ответов суммарно | `ratio × 200` |
 
 Для проверки объёма из рубрики укажите `10000`. Для превышения строгих порогов из описания задания укажите `10001`.
+
+## Проверка запросов
+
+Установите `DJANGO_DEBUG=true` в `.env.docker` для запуска через Compose или в `.env.local` для локального запуска. При локальном запуске остановите и снова запустите `runserver`. В Compose примените изменённые переменные командой
+
+```sh
+docker compose --env-file .env.docker up -d --wait web
+```
+
+1. Откройте [главную страницу](http://localhost:8000/) и выберите панель **SQL** в Django Debug Toolbar.
+2. Сравните число запросов на страницах с разным числом вопросов или ответов. Проверьте главную, список популярных вопросов, страницу тега, карточку вопроса и списки в админке.
+3. Для проверки режима без панели задайте `DJANGO_DEBUG=false` и примените настройки тем же способом. В этом режиме для отсутствующего вопроса или тега отображается страница 404 сайта.
+
+Для проверки автоматических тестов в Docker выполните следующую команду. Панель отладки во время тестов отключена.
+
+```sh
+docker compose --env-file .env.docker exec web python manage.py test
+```

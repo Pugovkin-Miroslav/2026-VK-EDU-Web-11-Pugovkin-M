@@ -32,7 +32,9 @@ class QuestionViewsTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         users = get_user_model().objects
-        cls.author = users.create_user(username='db-author')
+        cls.author = users.create_user(
+            username='db-author', first_name='Иван', last_name='Петров',
+        )
         cls.reader = users.create_user(username='db-reader')
         Profile.objects.create(user=cls.author, avatar='avatars/author.png')
         cls.tag = Tag.objects.create(name='Базы данных', slug='databases')
@@ -68,6 +70,8 @@ class QuestionViewsTests(TestCase):
                 self.assertContains(response, '/tag/databases/')
                 self.assertContains(response, 'Базы данных')
                 self.assertContains(response, 'Ответы: 2')
+                self.assertContains(response, 'Иван Петров')
+                self.assertNotContains(response, 'db-author')
 
     def test_detail_shows_accurate_counts_and_avatars(self):
         response = self.client.get(self.old.get_absolute_url())
@@ -75,6 +79,9 @@ class QuestionViewsTests(TestCase):
         self.assertContains(response, '/media/avatars/author.png')
         self.assertContains(response, '/static/core/img/profile-icon.png')
         self.assertContains(response, 'Правильный ответ')
+        self.assertContains(response, 'Иван Петров', count=2)
+        self.assertContains(response, 'db-reader')
+        self.assertNotContains(response, 'db-author')
         question = response.context['question']
         self.assertEqual((question.rating, question.answer_count), (2, 2))
         self.assertEqual([answer.rating for answer in response.context['page_obj']], [1, 0])

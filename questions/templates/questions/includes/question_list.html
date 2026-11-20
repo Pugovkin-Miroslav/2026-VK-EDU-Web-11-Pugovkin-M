@@ -3,7 +3,7 @@
         <div class="question-author">
             {% include "questions/includes/avatar.html" with avatar=question.author.profile.avatar css_class="question-avatar" only %}
 
-            <span>{{ question.author }}</span>
+            <span>{{ question.author.get_full_name|default:question.author.username }}</span>
 
             {% include "questions/includes/votes.html" with rating=question.rating %}
         </div>
