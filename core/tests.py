@@ -1,9 +1,107 @@
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError, transaction
-from django.test import TestCase
+from django.test import Client, TestCase
 from django.urls import reverse
 
 from .models import Profile
+
+
+class LoginLogoutTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.credentials = {'username': 'reader', 'password': 'reader-test-password'}
+        cls.user = get_user_model().objects.create_user(
+            first_name='Тестовый читатель', **cls.credentials,
+        )
+
+    def test_login_requires_csrf_and_returns_to_next_from_the_form(self):
+        client = Client(enforce_csrf_checks=True)
+        login_url = reverse('core:login')
+        next_url = '/hot/?page=2&filter=mine'
+
+        response = client.get(login_url, {'next': next_url})
+        self.assertContains(
+            response, '<input type="hidden" name="next" value="/hot/?page=2&amp;filter=mine">',
+            html=True,
+        )
+        data = {**self.credentials, 'next': next_url}
+        self.assertEqual(client.post(login_url, data).status_code, 403)
+
+        data['csrfmiddlewaretoken'] = client.cookies['csrftoken'].value
+        response = client.post(login_url, data)
+
+        self.assertRedirects(response, next_url)
+        self.assertEqual(client.get(next_url).wsgi_request.user, self.user)
+
+    def test_login_falls_back_to_home_without_a_safe_next(self):
+        for next_url in (None, 'https://example.org/', '//example.org/'):
+            with self.subTest(next=next_url):
+                data = self.credentials.copy()
+                if next_url is not None:
+                    data['next'] = next_url
+                response = self.client.post(reverse('core:login'), data)
+
+                self.assertRedirects(response, '/')
+
+    def test_invalid_password_displays_error_and_preserves_username(self):
+        response = self.client.post(
+            reverse('core:login'),
+            {'username': self.user.username, 'password': 'incorrect-password'},
+        )
+
+        self.assertContains(response, 'name="username"')
+        self.assertContains(response, 'value="reader"')
+        form_error, = response.context['form'].non_field_errors()
+        self.assertContains(response, form_error)
+        self.assertNotContains(response, 'incorrect-password')
+        self.assertFalse(response.wsgi_request.user.is_authenticated)
+
+    def test_logout_requires_post_and_csrf_and_returns_to_the_current_page(self):
+        client = Client(enforce_csrf_checks=True)
+        client.force_login(self.user)
+        logout_url = '/logout/'
+        current_url = '/hot/?page=2&filter=mine'
+
+        response = client.get(current_url)
+        self.assertContains(response, '<form method="post" action="/logout/">')
+        self.assertContains(
+            response, '<input type="hidden" name="next" value="/hot/?page=2&amp;filter=mine">',
+            html=True,
+        )
+        self.assertEqual(client.get(logout_url).status_code, 405)
+        self.assertEqual(client.post(logout_url, {'next': current_url}).status_code, 403)
+        self.assertTrue(client.get(current_url).wsgi_request.user.is_authenticated)
+
+        response = client.post(logout_url, {
+            'next': current_url,
+            'csrfmiddlewaretoken': client.cookies['csrftoken'].value,
+        })
+
+        self.assertRedirects(response, current_url)
+        self.assertFalse(client.get(current_url).wsgi_request.user.is_authenticated)
+
+    def test_logout_rejects_external_next(self):
+        self.client.force_login(self.user)
+
+        response = self.client.post('/logout/', {'next': 'https://example.org/'})
+
+        self.assertRedirects(response, '/')
+        self.assertFalse(self.client.get('/').wsgi_request.user.is_authenticated)
+
+    def test_header_reflects_the_session_even_on_the_ask_page(self):
+        for url in ('/', reverse('questions:ask')):
+            with self.subTest(url=url):
+                response = self.client.get(url)
+                self.assertContains(response, 'href="/login/"')
+                self.assertContains(response, 'href="/signup/"')
+                self.assertNotContains(response, 'Выйти')
+
+        self.client.force_login(self.user)
+        response = self.client.get('/')
+        self.assertContains(response, self.user.first_name)
+        self.assertContains(response, 'Выйти')
+        self.assertNotContains(response, 'href="/login/"')
+        self.assertNotContains(response, 'href="/signup/"')
 
 
 class ProfileTests(TestCase):

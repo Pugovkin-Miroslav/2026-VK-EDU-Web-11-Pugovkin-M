@@ -92,6 +92,10 @@ DATABASES = {
 }
 
 
+LOGIN_URL = 'core:login'
+LOGIN_REDIRECT_URL = 'questions:index'
+LOGOUT_REDIRECT_URL = 'questions:index'
+
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
