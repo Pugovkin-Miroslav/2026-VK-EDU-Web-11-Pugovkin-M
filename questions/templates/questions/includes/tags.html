@@ -1,3 +1,3 @@
-{% for label in question.tags %}
-    <a href="{% url 'questions:tag' label|lower %}" class="badge text-bg-primary">{{ label }}</a>
+{% for question_tag in question.tags.all %}
+    <a href="{% url 'questions:tag' question_tag.slug %}" class="badge text-bg-primary">{{ question_tag.name }}</a>
 {% endfor %}

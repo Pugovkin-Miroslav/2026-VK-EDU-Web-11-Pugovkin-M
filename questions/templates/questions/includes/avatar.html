@@ -1,0 +1,5 @@
+{% load static %}
+<img src="{% if avatar %}{{ avatar.url }}{% else %}{% static 'core/img/profile-icon.png' %}{% endif %}"
+     alt="{{ alt|default:'' }}"
+     {% if css_class %}class="{{ css_class }}"{% endif %}
+     {% if size %}width="{{ size }}" height="{{ size }}"{% endif %}>

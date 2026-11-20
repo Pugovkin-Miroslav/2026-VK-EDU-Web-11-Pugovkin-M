@@ -1,39 +1,31 @@
-from django.http import Http404
-from django.shortcuts import render
+from django.shortcuts import get_object_or_404, render
 
-from .demo_data import ANSWERS, QUESTIONS
-from .pagination import paginate
+from .models import Answer, Question, Tag
+from .pagination import pagination_context
+
+
+def _render_list(request, template, questions, **context):
+    return render(request, template, {**pagination_context(questions, request), **context})
 
 
 def index(request):
-    questions = sorted(QUESTIONS, key=lambda question: question['created_at'], reverse=True)
-    return render(request, 'questions/index.html', {'page_obj': paginate(questions, request)})
+    return _render_list(request, 'questions/index.html', Question.objects.newest())
 
 
 def hot(request):
-    questions = sorted(QUESTIONS, key=lambda question: question['rating'], reverse=True)
-    return render(request, 'questions/hot.html', {'page_obj': paginate(questions, request)})
+    return _render_list(request, 'questions/hot.html', Question.objects.popular())
 
 
 def tag(request, slug):
-    questions = [
-        question for question in QUESTIONS
-        if any(tag.lower() == slug for tag in question['tags'])
-    ]
-    return render(request, 'questions/tag.html', {
-        'page_obj': paginate(questions, request),
-        'tag': slug,
-    })
+    selected_tag = get_object_or_404(Tag, slug=slug)
+    questions = Question.objects.for_tag(selected_tag)
+    return _render_list(request, 'questions/tag.html', questions, tag=selected_tag)
 
 
 def detail(request, pk):
-    question = next((question for question in QUESTIONS if question['id'] == pk), None)
-    if question is None:
-        raise Http404
-    return render(request, 'questions/question.html', {
-        'question': question,
-        'page_obj': paginate(ANSWERS.get(pk, []), request),
-    })
+    question = get_object_or_404(Question.objects.with_card_data(), pk=pk)
+    context = pagination_context(Answer.objects.for_question(question), request)
+    return render(request, 'questions/question.html', {'question': question, **context})
 
 
 def ask(request):
