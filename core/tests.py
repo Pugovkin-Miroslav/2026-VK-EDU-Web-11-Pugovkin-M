@@ -1,7 +1,13 @@
+from io import BytesIO
+from pathlib import Path
+from tempfile import TemporaryDirectory
+
 from django.contrib.auth import get_user_model
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import IntegrityError, transaction
 from django.test import Client, TestCase
 from django.urls import reverse
+from PIL import Image
 
 from .models import Profile
 
@@ -173,6 +179,88 @@ class SignupTests(TestCase):
         self.assertTrue(form.has_error('username', 'unique'))
         self.assertEqual(users.count(), 1)
         self.assertFalse(Profile.objects.exists())
+
+
+class ProfileEditingTests(TestCase):
+    profile_data = {'email': 'updated@example.com', 'nick': 'Новое имя'}
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.user = get_user_model().objects.create_user(
+            username='reader', email='reader@example.com', first_name='Читатель',
+        )
+
+    def setUp(self):
+        self.url = reverse('core:profile')
+        self.media_root = self.enterContext(TemporaryDirectory())
+        self.enterContext(self.settings(MEDIA_ROOT=self.media_root, MEDIA_URL='/user-media/'))
+        self.client.force_login(self.user)
+
+    @staticmethod
+    def avatar_upload(filename='portrait.png', padding=0):
+        with BytesIO() as data:
+            Image.new('RGB', (2, 2)).save(data, format='PNG')
+            return SimpleUploadedFile(filename, data.getvalue() + b'\0' * padding)
+
+    def test_profile_requires_login_for_get_and_post(self):
+        guest = Client()
+
+        self.assertRedirects(guest.get(self.url), '/login/?next=/profile/')
+        self.assertRedirects(guest.post(self.url, self.profile_data), '/login/?next=/profile/')
+
+    def test_profile_shows_current_values_and_default_avatar(self):
+        response = self.client.get(self.url)
+
+        self.assertContains(response, 'enctype="multipart/form-data"')
+        self.assertContains(response, 'value="reader@example.com"')
+        self.assertContains(response, 'value="Читатель"')
+        self.assertContains(response, 'src="/static/core/img/profile-icon.png"')
+        self.assertFalse(Profile.objects.filter(user=self.user).exists())
+
+    def test_save_updates_profile_and_displays_uploaded_avatar(self):
+        response = self.client.post(self.url, {
+            **self.profile_data, 'avatar': self.avatar_upload(),
+        })
+
+        self.assertRedirects(response, self.url)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.email, 'updated@example.com')
+        self.assertEqual(self.user.first_name, 'Новое имя')
+        self.assertEqual(self.user.username, 'reader')
+        avatar = Profile.objects.get(user=self.user).avatar
+        self.assertRegex(avatar.name, r'^avatars/[0-9a-f]{32}\.png$')
+        self.assertTrue(Path(self.media_root, avatar.name).is_file())
+        self.assertContains(self.client.get(self.url), f'src="{avatar.url}"')
+        self.assertContains(self.client.get('/'), f'src="/user-media/{avatar.name}"')
+
+    def test_saving_without_a_file_keeps_the_existing_avatar(self):
+        Profile.objects.create(user=self.user, avatar='avatars/old.png')
+
+        response = self.client.post(self.url, self.profile_data)
+
+        self.assertRedirects(response, self.url)
+        self.assertEqual(Profile.objects.get(user=self.user).avatar.name, 'avatars/old.png')
+
+    def test_invalid_avatars_display_errors_without_saving_profile_changes(self):
+        for avatar, code in (
+            (self.avatar_upload('portrait.gif'), 'invalid_extension'),
+            (self.avatar_upload('portrait.jpg'), 'invalid_image_format'),
+            (self.avatar_upload(padding=2 * 1024 * 1024), 'file_too_large'),
+            (SimpleUploadedFile('portrait.png', b'not an image'), 'invalid_image'),
+        ):
+            with self.subTest(code=code):
+                response = self.client.post(self.url, {**self.profile_data, 'avatar': avatar})
+
+                form = response.context.get('form')
+                self.assertIsNotNone(form)
+                self.assertTrue(form.has_error('avatar', code))
+                self.assertContains(response, form['avatar'].errors[0])
+                self.assertContains(response, 'value="updated@example.com"')
+                self.assertContains(response, 'value="Новое имя"')
+
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.email, 'reader@example.com')
+        self.assertFalse(Profile.objects.filter(user=self.user).exists())
 
 
 class ProfileTests(TestCase):
