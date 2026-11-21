@@ -1,4 +1,5 @@
 {% extends "core/base.html" %}
+{% load static %}
 
 {% block content %}
 <main class="questions">
@@ -9,4 +10,8 @@
     {% include "questions/includes/question_list.html" %}
     {% include "questions/includes/pagination.html" %}
 </main>
+{% endblock %}
+
+{% block scripts %}
+    <script type="module" src="{% static 'questions/js/votes.js' %}"></script>
 {% endblock %}

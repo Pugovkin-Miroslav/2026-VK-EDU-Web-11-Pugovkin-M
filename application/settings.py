@@ -56,10 +56,11 @@ if DEBUG_TOOLBAR_ENABLED:
     INTERNAL_IPS = ['127.0.0.1', '::1']
     if DJANGO_ENV == 'docker':
         DEBUG_TOOLBAR_CONFIG = {
-            'SHOW_TOOLBAR_CALLBACK': 'debug_toolbar.middleware.show_toolbar_with_docker',
+            'SHOW_TOOLBAR_CALLBACK': 'application.debug.show_toolbar_in_docker',
         }
 
 ROOT_URLCONF = 'application.urls'
+CSRF_FAILURE_VIEW = 'questions.views.csrf_failure'
 
 TEMPLATES = [
     {
@@ -91,6 +92,10 @@ DATABASES = {
     }
 }
 
+
+LOGIN_URL = 'core:login'
+LOGIN_REDIRECT_URL = 'questions:index'
+LOGOUT_REDIRECT_URL = 'questions:index'
 
 AUTH_PASSWORD_VALIDATORS = [
     {

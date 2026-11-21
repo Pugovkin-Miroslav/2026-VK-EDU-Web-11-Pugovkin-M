@@ -54,9 +54,9 @@ class TagAdmin(admin.ModelAdmin):
 
 @admin.register(QuestionLike)
 class QuestionLikeAdmin(admin.ModelAdmin):
-    list_display = ('question', 'user', 'created_at')
+    list_display = ('question', 'user', 'value', 'created_at')
     search_fields = ('question__title', 'user__username')
-    list_filter = ('created_at',)
+    list_filter = ('value', 'created_at')
     list_select_related = ('question', 'user')
     autocomplete_fields = ('question', 'user')
     show_full_result_count = False
@@ -64,9 +64,9 @@ class QuestionLikeAdmin(admin.ModelAdmin):
 
 @admin.register(AnswerLike)
 class AnswerLikeAdmin(admin.ModelAdmin):
-    list_display = ('answer', 'user', 'created_at')
+    list_display = ('answer', 'user', 'value', 'created_at')
     search_fields = ('answer__text', 'user__username')
-    list_filter = ('created_at',)
+    list_filter = ('value', 'created_at')
     list_select_related = ('answer', 'user')
     autocomplete_fields = ('answer', 'user')
     show_full_result_count = False

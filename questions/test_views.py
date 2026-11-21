@@ -1,8 +1,8 @@
 from datetime import timedelta
 
 from django.contrib.auth import get_user_model
-from django.db import connection
-from django.test import TestCase
+from django.db import IntegrityError, connection, transaction
+from django.test import Client, TestCase
 from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from django.utils import timezone
@@ -26,6 +26,138 @@ class EmptyQuestionViewsTests(TestCase):
         ):
             with self.subTest(path=path):
                 self.assertContains(self.client.get(path), 'Страница не найдена', status_code=404)
+
+
+class AskQuestionTests(TestCase):
+    question_data = {'title': 'Как работает Django?', 'text': 'Текст моего вопроса'}
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.user = get_user_model().objects.create_user(username='question-author')
+
+    def test_guest_sees_disabled_ask_button_and_is_redirected_to_login(self):
+        url = reverse('questions:ask')
+
+        self.assertRedirects(self.client.get(url), '/login/?next=/ask/')
+        self.assertRedirects(self.client.post(url, self.question_data), '/login/?next=/ask/')
+        homepage = self.client.get('/')
+        self.assertContains(homepage, 'title="Войдите, чтобы задать вопрос"')
+        self.assertContains(
+            homepage, '<button type="button" class="btn btn-primary" disabled>Задать вопрос</button>',
+            html=True,
+        )
+        self.assertFalse(Question.objects.exists())
+
+    def test_publish_reuses_tags_and_handles_cyrillic_and_slug_collisions(self):
+        existing_tag = Tag.objects.create(name='Python', slug='python-existing')
+        client = Client(enforce_csrf_checks=True)
+        client.force_login(self.user)
+        url = reverse('questions:ask')
+        data = {**self.question_data, 'tags': ' python, PYTHON, Базы данных, базы данных, C++, C# '}
+
+        self.assertEqual(client.get(url).status_code, 200)
+        self.assertEqual(client.post(url, data).status_code, 403)
+        response = client.post(url, {**data, 'csrfmiddlewaretoken': client.cookies['csrftoken'].value})
+
+        self.assertEqual(response.status_code, 302)
+        question = Question.objects.get()
+        self.assertRedirects(response, question.get_absolute_url())
+        self.assertEqual(question.author, self.user)
+        self.assertEqual(question.title, self.question_data['title'])
+        self.assertEqual(question.text, self.question_data['text'])
+        self.assertIn(existing_tag, question.tags.all())
+        self.assertCountEqual(question.tags.values_list('name', flat=True), [
+            'Python', 'Базы данных', 'C++', 'C#',
+        ])
+        for tag in question.tags.all():
+            self.assertContains(self.client.get(reverse('questions:tag', args=[tag.slug])), question.title)
+
+    def test_invalid_tag_preserves_entered_values_without_creating_records(self):
+        self.client.force_login(self.user)
+        invalid_tag = 'x' * 81
+
+        response = self.client.post(reverse('questions:ask'), {**self.question_data, 'tags': invalid_tag})
+
+        form = response.context.get('form')
+        self.assertIsNotNone(form)
+        self.assertTrue(form.has_error('tags'))
+        self.assertContains(response, form['tags'].errors[0])
+        self.assertContains(response, self.question_data['title'])
+        self.assertContains(response, self.question_data['text'])
+        self.assertContains(response, invalid_tag)
+        self.assertFalse(Question.objects.exists())
+        self.assertFalse(Tag.objects.exists())
+
+
+class AnswerSubmissionTests(TestCase):
+    answer_text = 'Новый ответ на вопрос'
+
+    @classmethod
+    def setUpTestData(cls):
+        users = get_user_model().objects
+        cls.author = users.create_user(username='question-author')
+        cls.reader = users.create_user(username='answer-author')
+        cls.question = Question.objects.create(title='Вопрос', text='Текст', author=cls.author)
+        cls.url = cls.question.get_absolute_url()
+
+    def add_ten_answers(self, created_at):
+        Answer.objects.bulk_create([
+            Answer(question=self.question, author=self.author, text=f'Ответ {number}', created_at=created_at)
+            for number in range(10)
+        ])
+
+    def test_guest_can_read_question_and_must_log_in_to_answer(self):
+        response = self.client.get(self.url)
+
+        self.assertContains(response, self.question.title)
+        self.assertContains(response, '<fieldset disabled')
+        self.assertContains(response, 'title="Войдите, чтобы ответить"')
+        self.assertRedirects(
+            self.client.post(self.url, {'text': self.answer_text}),
+            f'/login/?next={self.url}',
+        )
+        self.assertFalse(Answer.objects.exists())
+
+    def test_post_requires_csrf_and_redirects_to_answer_on_second_page(self):
+        self.add_ten_answers(timezone.now() - timedelta(days=1))
+        client = Client(enforce_csrf_checks=True)
+        client.force_login(self.reader)
+        data = {'text': self.answer_text}
+
+        self.assertEqual(client.get(self.url).status_code, 200)
+        self.assertEqual(client.post(self.url, data).status_code, 403)
+        response = client.post(self.url, {
+            **data, 'csrfmiddlewaretoken': client.cookies['csrftoken'].value,
+        }, follow=True)
+
+        answer = Answer.objects.filter(question=self.question, author=self.reader).first()
+        self.assertIsNotNone(answer)
+        self.assertEqual(answer.text, self.answer_text)
+        self.assertRedirects(response, f'{self.url}?page=2#answer-{answer.pk}')
+        self.assertContains(response, f'id="answer-{answer.pk}"')
+        self.assertContains(response, self.answer_text)
+
+    def test_redirect_uses_the_new_answers_position_even_if_it_is_on_first_page(self):
+        self.add_ten_answers(timezone.now() + timedelta(days=1))
+        self.client.force_login(self.reader)
+
+        response = self.client.post(f'{self.url}?page=2', {'text': self.answer_text})
+
+        answer = Answer.objects.filter(question=self.question, author=self.reader).first()
+        self.assertIsNotNone(answer)
+        self.assertRedirects(response, f'{self.url}#answer-{answer.pk}')
+
+    def test_empty_answer_displays_error_and_remains_bound(self):
+        self.client.force_login(self.reader)
+
+        response = self.client.post(self.url, {'text': '   '})
+
+        form = response.context.get('form')
+        self.assertIsNotNone(form)
+        self.assertEqual(form['text'].value(), '   ')
+        self.assertTrue(form.has_error('text', 'required'))
+        self.assertContains(response, form['text'].errors[0])
+        self.assertFalse(Answer.objects.exists())
 
 
 class QuestionViewsTests(TestCase):
@@ -86,6 +218,39 @@ class QuestionViewsTests(TestCase):
         self.assertEqual((question.rating, question.answer_count), (2, 2))
         self.assertEqual([answer.rating for answer in response.context['page_obj']], [1, 0])
 
+    def test_hot_ranks_questions_by_signed_votes(self):
+        for vote in QuestionLike.objects.filter(question=self.old):
+            vote.value = -1
+            vote.save()
+
+        response = self.client.get(reverse('questions:hot'))
+
+        self.assertEqual(
+            [(question.pk, question.rating) for question in response.context['page_obj']],
+            [(self.new.pk, 0), (self.old.pk, -2)],
+        )
+
+    def test_answer_ratings_sum_likes_and_dislikes(self):
+        for answer in (self.first_answer, self.second_answer):
+            vote = AnswerLike(answer=answer, user=self.reader)
+            vote.value = -1
+            vote.save()
+
+        response = self.client.get(self.old.get_absolute_url())
+
+        self.assertEqual([answer.rating for answer in response.context['page_obj']], [0, -1])
+        self.assertEqual(response.context['question'].answer_count, 2)
+
+    def test_database_checks_question_and_answer_vote_values(self):
+        for vote in (
+            QuestionLike(question=self.new, user=self.reader),
+            AnswerLike(answer=self.second_answer, user=self.reader),
+        ):
+            with self.subTest(model=type(vote).__name__):
+                vote.value = 0
+                with self.assertRaises(IntegrityError), transaction.atomic():
+                    vote.save()
+
     def test_existing_empty_tag_and_question_show_empty_states(self):
         Tag.objects.create(name='Пустой тег', slug='empty')
         self.assertContains(self.client.get('/tag/empty/'), 'Вопросов пока нет.')
@@ -110,6 +275,7 @@ class QuestionViewsTests(TestCase):
                     self.assertEqual(page.number, 1)
 
     def test_list_and_detail_query_counts_do_not_grow_per_row(self):
+        self.client.force_login(self.reader)
         paths = ('/', '/hot/', '/tag/databases/', self.old.get_absolute_url())
 
         def query_counts():

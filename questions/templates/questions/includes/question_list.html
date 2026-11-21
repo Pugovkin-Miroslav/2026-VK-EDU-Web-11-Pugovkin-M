@@ -5,7 +5,7 @@
 
             <span>{{ question.author.get_full_name|default:question.author.username }}</span>
 
-            {% include "questions/includes/votes.html" with rating=question.rating %}
+            {% include "questions/includes/votes.html" with target=question vote_route='questions:ajax_vote_question' %}
         </div>
 
         <div class="question-content">

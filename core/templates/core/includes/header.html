@@ -5,7 +5,7 @@
              alt="VK ответы"
              class="header-logo">
     </a>
-    {% if show_user %}
+    {% if request.user.is_authenticated %}
         <form class="header-search">
             <label for="value" class="visually-hidden">Поиск</label>
             <input id="value"
@@ -13,21 +13,24 @@
                    type="search"
                    placeholder="Найти"
                    required>
+            <a href="{% url 'questions:ask' %}" class="btn btn-primary">Задать вопрос</a>
         </form>
 
         <div class="header-user">
             <a href="{% url 'core:profile' %}">
-                <img src="{% static 'core/img/profile-icon.png' %}"
-                     alt="Аватар пользователя"
-                     class="header-avatar">
+                {% include "questions/includes/avatar.html" with avatar=request.user.profile.avatar alt="Аватар пользователя" css_class="header-avatar" only %}
             </a>
 
             <div>
-                <p>Имя пользователя</p>
+                <p>{{ request.user.get_full_name|default:request.user.username }}</p>
 
                 <div class="header-user-links">
                     <a href="{% url 'core:profile' %}">Настройки</a>
-                    <a href="{% url 'questions:index' %}">Выйти</a>
+                    <form method="post" action="{% url 'core:logout' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                        <button type="submit" class="btn btn-link p-0 border-0 align-baseline">Выйти</button>
+                    </form>
                 </div>
             </div>
         </div>
@@ -38,7 +41,9 @@
                    type="search"
                    placeholder="Найти вопрос"
                    required>
-            <a href="{% url 'questions:ask' %}" class="btn btn-primary">Задать вопрос</a>
+            <span class="d-inline-block" tabindex="0" title="Войдите, чтобы задать вопрос">
+                <button type="button" class="btn btn-primary" disabled>Задать вопрос</button>
+            </span>
         </div>
         <nav class="header-auth" aria-label="Авторизация">
             <a href="{% url 'core:signup' %}" class="btn btn-primary">Зарегистрироваться</a>
