@@ -99,7 +99,15 @@ class CorrectAnswerTests(TestCase):
         self.client.force_login(self.author)
         author = self.client.get(question_url)
         self.assertContains(author, f'action="{self.url}"', count=2)
+        self.assertContains(author, 'data-correct-label', count=1)
         self.assertRegex(author.content.decode(), r'<form[^>]+data-correct-form[^>]+\bhidden>')
+
+    def test_author_page_has_no_badge_when_no_answer_is_correct(self):
+        self.client.force_login(self.author)
+
+        response = self.client.get(self.question.get_absolute_url())
+
+        self.assertNotContains(response, 'data-correct-label')
 
     def test_database_rejects_two_correct_answers_to_one_question(self):
         self.first.is_correct = True

@@ -12,7 +12,8 @@ document.addEventListener('submit', async (event) => {
         return;
     }
 
-    const forms = document.querySelectorAll('[data-correct-form]');
+    const question = form.closest('[data-question-detail]');
+    const forms = question.querySelectorAll('[data-correct-form]');
     const buttons = Array.from(forms, (choice) => choice.querySelector('button'));
     const fields = {
         question_id: form.elements.namedItem('question_id').value,
@@ -36,11 +37,12 @@ document.addEventListener('submit', async (event) => {
             return;
         }
 
-        forms.forEach((choice) => {
-            const selected = choice === form;
-            choice.hidden = selected;
-            choice.parentElement.querySelector('[data-correct-label]').hidden = !selected;
-        });
+        const template = question.querySelector('[data-correct-badge-template]');
+        const badge = template.content.firstElementChild.cloneNode(true);
+        badge.setAttribute('data-correct-label', '');
+        question.querySelectorAll('[data-correct-label]').forEach((label) => label.remove());
+        forms.forEach((choice) => { choice.hidden = choice === form; });
+        form.before(badge);
     } finally {
         buttons.forEach((choice) => { choice.disabled = false; });
     }
