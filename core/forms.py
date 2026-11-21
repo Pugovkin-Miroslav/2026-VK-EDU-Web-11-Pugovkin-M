@@ -10,6 +10,8 @@ from .models import Profile
 
 AVATAR_FORMATS = {'jpg': 'JPEG', 'jpeg': 'JPEG', 'png': 'PNG', 'webp': 'WEBP'}
 AVATAR_SIZE_LIMIT_MB = 2
+AVATAR_SIZE_LIMIT_BYTES = AVATAR_SIZE_LIMIT_MB * 1024 * 1024
+AVATAR_SIZE_ERROR = f'Размер аватара не должен превышать {AVATAR_SIZE_LIMIT_MB} МБ.'
 
 
 class LoginForm(AuthenticationForm):
@@ -57,6 +59,8 @@ class ProfileForm(forms.Form):
         validators=[FileExtensionValidator(allowed_extensions=tuple(AVATAR_FORMATS))],
         widget=forms.FileInput(attrs={
             'class': 'form-control', 'accept': 'image/jpeg,image/png,image/webp',
+            'data-avatar-max-bytes': AVATAR_SIZE_LIMIT_BYTES,
+            'data-avatar-size-error': AVATAR_SIZE_ERROR,
         }),
     )
 
@@ -69,11 +73,8 @@ class ProfileForm(forms.Form):
         avatar = self.cleaned_data['avatar']
         if avatar is None:
             return None
-        if avatar.size > AVATAR_SIZE_LIMIT_MB * 1024 * 1024:
-            raise ValidationError(
-                f'Размер аватара не должен превышать {AVATAR_SIZE_LIMIT_MB} МБ.',
-                code='file_too_large',
-            )
+        if avatar.size > AVATAR_SIZE_LIMIT_BYTES:
+            raise ValidationError(AVATAR_SIZE_ERROR, code='file_too_large')
         extension = Path(avatar.name).suffix.lower().lstrip('.')
         if avatar.image.format != AVATAR_FORMATS[extension]:
             raise ValidationError(

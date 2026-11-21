@@ -215,6 +215,8 @@ class ProfileEditingTests(TestCase):
         self.assertContains(response, 'value="reader@example.com"')
         self.assertContains(response, 'value="Читатель"')
         self.assertContains(response, 'src="/static/core/img/profile-icon.png"')
+        self.assertContains(response, 'data-avatar-max-bytes="2097152"')
+        self.assertContains(response, 'src="/static/core/js/profile.js"')
         self.assertFalse(Profile.objects.filter(user=self.user).exists())
 
     def test_save_updates_profile_and_displays_uploaded_avatar(self):
