@@ -60,6 +60,7 @@ if DEBUG_TOOLBAR_ENABLED:
         }
 
 ROOT_URLCONF = 'application.urls'
+CSRF_FAILURE_VIEW = 'questions.views.csrf_failure'
 
 TEMPLATES = [
     {

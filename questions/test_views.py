@@ -275,6 +275,7 @@ class QuestionViewsTests(TestCase):
                     self.assertEqual(page.number, 1)
 
     def test_list_and_detail_query_counts_do_not_grow_per_row(self):
+        self.client.force_login(self.reader)
         paths = ('/', '/hot/', '/tag/databases/', self.old.get_absolute_url())
 
         def query_counts():

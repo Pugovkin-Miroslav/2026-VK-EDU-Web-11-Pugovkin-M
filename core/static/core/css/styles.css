@@ -288,8 +288,17 @@ footer{
     cursor: pointer;
 }
 
-.votes-button:hover {s
+.votes-button:not(:disabled):hover,
+.votes-button[aria-pressed="true"] {
     background-color: #edf4fd;
+}
+
+.votes-button:disabled {
+    cursor: default;
+}
+
+.votes-button:disabled[aria-pressed="false"] img {
+    opacity: 0.5;
 }
 
 .votes-button img {

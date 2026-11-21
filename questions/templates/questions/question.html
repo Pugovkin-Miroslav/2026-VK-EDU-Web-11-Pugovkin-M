@@ -1,4 +1,5 @@
 {% extends "core/base.html" %}
+{% load static %}
 
 {% block title %}{{ question.title }}{% endblock %}
 
@@ -19,7 +20,7 @@
             {% include "questions/includes/tags.html" %}
         </div>
 
-        {% include "questions/includes/votes.html" with rating=question.rating %}
+        {% include "questions/includes/votes.html" with target=question vote_route='questions:ajax_vote_question' %}
     </article>
 
     <h2 class="mb-3">Ответы</h2>
@@ -34,7 +35,7 @@
                 · {{ answer.created_at|date:'d.m.Y' }}
             </p>
 
-            {% include "questions/includes/votes.html" with rating=answer.rating %}
+            {% include "questions/includes/votes.html" with target=answer vote_route='questions:ajax_vote_answer' %}
 
             {% if answer.is_correct %}
                 <p class="text-success mt-3 mb-0">Правильный ответ</p>
@@ -69,4 +70,8 @@
         </fieldset>
     </form>
 </main>
+{% endblock %}
+
+{% block scripts %}
+    <script src="{% static 'questions/js/votes.js' %}" defer></script>
 {% endblock %}

@@ -19,6 +19,13 @@ def _aggregate_related(model, foreign_key, aggregate):
     return Coalesce(Subquery(totals), Value(0), output_field=models.IntegerField())
 
 
+def _with_user_vote(queryset, vote_model, foreign_key, user):
+    if user is None or not user.is_authenticated:
+        return queryset
+    vote = vote_model.objects.filter(**{foreign_key: OuterRef('pk')}, user_id=user.pk)
+    return queryset.annotate(user_vote=Subquery(vote.values('value')))
+
+
 class TagManager(models.Manager):
     def popular(self):
         return (
@@ -29,8 +36,8 @@ class TagManager(models.Manager):
 
 
 class QuestionManager(models.Manager):
-    def with_card_data(self):
-        return (
+    def with_card_data(self, user=None):
+        queryset = (
             self.select_related('author__profile')
             .prefetch_related('tags')
             .annotate(
@@ -38,25 +45,27 @@ class QuestionManager(models.Manager):
                 answer_count=_aggregate_related(Answer, 'question_id', Count('*')),
             )
         )
+        return _with_user_vote(queryset, QuestionLike, 'question_id', user)
 
-    def newest(self):
-        return self.with_card_data().order_by('-created_at', '-pk')
+    def newest(self, user=None):
+        return self.with_card_data(user).order_by('-created_at', '-pk')
 
-    def popular(self):
-        return self.with_card_data().order_by('-rating', '-created_at', '-pk')
+    def popular(self, user=None):
+        return self.with_card_data(user).order_by('-rating', '-created_at', '-pk')
 
-    def for_tag(self, tag):
-        return self.newest().filter(tags=tag)
+    def for_tag(self, tag, user=None):
+        return self.newest(user).filter(tags=tag)
 
 
 class AnswerManager(models.Manager):
-    def for_question(self, question):
-        return (
+    def for_question(self, question, user=None):
+        queryset = (
             self.filter(question=question)
             .select_related('author__profile')
             .annotate(rating=_aggregate_related(AnswerLike, 'answer_id', Sum('value')))
             .order_by('created_at', 'pk')
         )
+        return _with_user_vote(queryset, AnswerLike, 'answer_id', user)
 
 
 class Tag(models.Model):

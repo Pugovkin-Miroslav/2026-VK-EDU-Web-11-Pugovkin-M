@@ -1,7 +1,10 @@
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ValidationError
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.views.csrf import csrf_failure as default_csrf_failure
 
-from .forms import AnswerForm, QuestionForm
+from .forms import AnswerForm, QuestionForm, VoteForm
 from .models import Answer, Question, Tag
 from .pagination import pagination_context
 
@@ -11,21 +14,21 @@ def _render_list(request, template, questions, **context):
 
 
 def index(request):
-    return _render_list(request, 'questions/index.html', Question.objects.newest())
+    return _render_list(request, 'questions/index.html', Question.objects.newest(request.user))
 
 
 def hot(request):
-    return _render_list(request, 'questions/hot.html', Question.objects.popular())
+    return _render_list(request, 'questions/hot.html', Question.objects.popular(request.user))
 
 
 def tag(request, slug):
     selected_tag = get_object_or_404(Tag, slug=slug)
-    questions = Question.objects.for_tag(selected_tag)
+    questions = Question.objects.for_tag(selected_tag, request.user)
     return _render_list(request, 'questions/tag.html', questions, tag=selected_tag)
 
 
 def _render_question(request, question, form):
-    context = pagination_context(Answer.objects.for_question(question), request)
+    context = pagination_context(Answer.objects.for_question(question, request.user), request)
     return render(request, 'questions/question.html', {'question': question, 'form': form, **context})
 
 
@@ -38,7 +41,7 @@ def _post_answer(request, question):
 
 
 def detail(request, pk):
-    question = get_object_or_404(Question.objects.with_card_data(), pk=pk)
+    question = get_object_or_404(Question.objects.with_card_data(request.user), pk=pk)
     if request.method == 'POST':
         return _post_answer(request, question)
     return _render_question(request, question, AnswerForm())
@@ -53,3 +56,28 @@ def ask(request):
     if form.is_valid():
         return redirect(form.save())
     return render(request, 'questions/ask.html', {'form': form})
+
+
+def vote(request, target_model):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Допустим только метод POST.'}, status=405, headers={'Allow': 'POST'})
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Войдите, чтобы голосовать.'}, status=401)
+
+    form = VoteForm(request.POST)
+    if not form.is_valid():
+        return JsonResponse({'error': 'Некорректные данные голосования.'}, status=400)
+
+    try:
+        result = form.save(target_model=target_model, user=request.user)
+    except ValidationError as error:
+        status = 404 if error.code == 'missing_vote_target' else 409
+        return JsonResponse({'error': error.message}, status=status)
+    return JsonResponse(result)
+
+
+def csrf_failure(request, reason=''):
+    match = request.resolver_match
+    if match and match.namespace == 'questions' and (match.url_name or '').startswith('ajax_'):
+        return JsonResponse({'error': 'Ошибка проверки CSRF. Обновите страницу и повторите попытку.'}, status=403)
+    return default_csrf_failure(request, reason=reason)

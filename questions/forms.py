@@ -3,9 +3,10 @@ from itertools import count
 
 from django import forms
 from django.db import transaction
+from django.db.models import Sum
 from django.utils.text import slugify
 
-from .models import Answer, Question, Tag
+from .models import Answer, Question, Tag, VoteValue
 
 
 TAG_NAME_MAX_LENGTH = Tag._meta.get_field('name').max_length
@@ -89,3 +90,25 @@ class AnswerForm(forms.ModelForm):
         self.instance.question = question
         self.instance.author = author
         return super().save(commit=commit)
+
+
+class VoteForm(forms.Form):
+    id = forms.IntegerField(min_value=1, max_value=2**63 - 1)
+    value = forms.TypedChoiceField(choices=VoteValue.choices, coerce=int)
+
+    @transaction.atomic
+    def save(self, *, target_model, user):
+        target = target_model.objects.select_for_update(no_key=True).filter(pk=self.cleaned_data['id']).first()
+        if target is None:
+            raise forms.ValidationError('Объект для голосования не найден.', code='missing_vote_target')
+
+        value = self.cleaned_data['value']
+        vote, created = target.likes.get_or_create(user=user, defaults={'value': value})
+        if not created:
+            if vote.value == value:
+                raise forms.ValidationError('Вы уже поставили эту оценку.', code='duplicate_vote')
+            vote.value = value
+            vote.save(update_fields=['value'])
+
+        rating = target.likes.aggregate(rating=Sum('value', default=0))['rating']
+        return {'rating': rating, 'value': value}
