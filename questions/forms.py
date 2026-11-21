@@ -11,6 +11,7 @@ from .models import Answer, Question, Tag, VoteValue
 
 TAG_NAME_MAX_LENGTH = Tag._meta.get_field('name').max_length
 TAG_SLUG_MAX_LENGTH = Tag._meta.get_field('slug').max_length
+MAX_OBJECT_ID = 2**63 - 1
 
 
 def _get_or_create_tag(name):
@@ -93,14 +94,14 @@ class AnswerForm(forms.ModelForm):
 
 
 class VoteForm(forms.Form):
-    id = forms.IntegerField(min_value=1, max_value=2**63 - 1)
+    id = forms.IntegerField(min_value=1, max_value=MAX_OBJECT_ID)
     value = forms.TypedChoiceField(choices=[*VoteValue.choices, (0, 'Убрать голос')], coerce=int)
 
     @transaction.atomic
     def save(self, *, target_model, user):
         target = target_model.objects.select_for_update(no_key=True).filter(pk=self.cleaned_data['id']).first()
         if target is None:
-            raise forms.ValidationError('Объект для голосования не найден.', code='missing_vote_target')
+            raise forms.ValidationError('Объект для голосования не найден.', code='not_found')
 
         value = self.cleaned_data['value']
         if value == 0:
@@ -109,9 +110,39 @@ class VoteForm(forms.Form):
             vote, created = target.likes.get_or_create(user=user, defaults={'value': value})
             if not created:
                 if vote.value == value:
-                    raise forms.ValidationError('Вы уже поставили эту оценку.', code='duplicate_vote')
+                    raise forms.ValidationError('Вы уже поставили эту оценку.', code='conflict')
                 vote.value = value
                 vote.save(update_fields=['value'])
 
         rating = target.likes.aggregate(rating=Sum('value', default=0))['rating']
         return {'rating': rating, 'value': value}
+
+
+class CorrectAnswerForm(forms.Form):
+    question_id = forms.IntegerField(min_value=1, max_value=MAX_OBJECT_ID)
+    answer_id = forms.IntegerField(min_value=1, max_value=MAX_OBJECT_ID)
+
+    @transaction.atomic
+    def save(self, *, user):
+        question = Question.objects.select_for_update(no_key=True).filter(
+            pk=self.cleaned_data['question_id'],
+        ).first()
+        if question is None:
+            raise forms.ValidationError('Вопрос не найден.', code='not_found')
+        if question.author_id != user.pk:
+            raise forms.ValidationError(
+                'Только автор вопроса может выбрать правильный ответ.', code='permission_denied',
+            )
+
+        answer = question.answers.select_for_update(no_key=True).filter(
+            pk=self.cleaned_data['answer_id'],
+        ).first()
+        if answer is None:
+            raise forms.ValidationError('Ответ не найден в этом вопросе.', code='not_found')
+        if answer.is_correct:
+            raise forms.ValidationError('Этот ответ уже отмечен правильным.', code='conflict')
+
+        question.answers.filter(is_correct=True).update(is_correct=False)
+        answer.is_correct = True
+        answer.save(update_fields=['is_correct'])
+        return {'answer_id': answer.pk}

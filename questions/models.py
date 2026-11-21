@@ -141,6 +141,12 @@ class Answer(models.Model):
     class Meta:
         verbose_name = 'ответ'
         verbose_name_plural = 'ответы'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['question'], condition=models.Q(is_correct=True),
+                name='one_correct_answer_per_question',
+            ),
+        ]
         indexes = [
             models.Index(
                 fields=['question', 'created_at', 'id'],

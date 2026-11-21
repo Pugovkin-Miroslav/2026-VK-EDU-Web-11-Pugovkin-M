@@ -4,7 +4,7 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.csrf import csrf_failure as default_csrf_failure
 
-from .forms import AnswerForm, QuestionForm, VoteForm
+from .forms import AnswerForm, CorrectAnswerForm, QuestionForm, VoteForm
 from .models import Answer, Question, Tag
 from .pagination import pagination_context
 
@@ -58,22 +58,39 @@ def ask(request):
     return render(request, 'questions/ask.html', {'form': form})
 
 
-def vote(request, target_model):
+def _ajax_form_response(request, form_class, *, auth_message, invalid_message, **save_kwargs):
     if request.method != 'POST':
         return JsonResponse({'error': 'Допустим только метод POST.'}, status=405, headers={'Allow': 'POST'})
     if not request.user.is_authenticated:
-        return JsonResponse({'error': 'Войдите, чтобы голосовать.'}, status=401)
+        return JsonResponse({'error': auth_message}, status=401)
 
-    form = VoteForm(request.POST)
+    form = form_class(request.POST)
     if not form.is_valid():
-        return JsonResponse({'error': 'Некорректные данные голосования.'}, status=400)
+        return JsonResponse({'error': invalid_message}, status=400)
 
     try:
-        result = form.save(target_model=target_model, user=request.user)
+        result = form.save(user=request.user, **save_kwargs)
     except ValidationError as error:
-        status = 404 if error.code == 'missing_vote_target' else 409
+        status = {'not_found': 404, 'permission_denied': 403, 'conflict': 409}.get(error.code, 400)
         return JsonResponse({'error': error.message}, status=status)
     return JsonResponse(result)
+
+
+def vote(request, target_model):
+    return _ajax_form_response(
+        request, VoteForm,
+        auth_message='Войдите, чтобы голосовать.',
+        invalid_message='Некорректные данные голосования.',
+        target_model=target_model,
+    )
+
+
+def mark_correct_answer(request):
+    return _ajax_form_response(
+        request, CorrectAnswerForm,
+        auth_message='Войдите, чтобы отметить правильный ответ.',
+        invalid_message='Некорректные данные ответа.',
+    )
 
 
 def csrf_failure(request, reason=''):
