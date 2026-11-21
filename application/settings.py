@@ -56,7 +56,7 @@ if DEBUG_TOOLBAR_ENABLED:
     INTERNAL_IPS = ['127.0.0.1', '::1']
     if DJANGO_ENV == 'docker':
         DEBUG_TOOLBAR_CONFIG = {
-            'SHOW_TOOLBAR_CALLBACK': 'debug_toolbar.middleware.show_toolbar_with_docker',
+            'SHOW_TOOLBAR_CALLBACK': 'application.debug.show_toolbar_in_docker',
         }
 
 ROOT_URLCONF = 'application.urls'

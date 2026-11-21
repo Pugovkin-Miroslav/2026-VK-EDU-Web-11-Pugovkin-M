@@ -1,4 +1,4 @@
-# VK ответы — ДЗ 3
+# VK ответы — ДЗ 4
 
 Команды выполняются из корня репозитория. Проект использует PostgreSQL. Применение миграций создаёт таблицы в PostgreSQL.
 
@@ -31,9 +31,19 @@ test -f .env.docker || cp .env.example .env.docker
 docker compose --env-file .env.docker up -d --build --wait
 docker compose --env-file .env.docker exec web python manage.py check
 docker compose --env-file .env.docker exec web python manage.py migrate --check
+docker compose --env-file .env.docker exec nginx nginx -t
 ```
 
-Сайт доступен на локальном компьютере по адресу [http://localhost:8000/](http://localhost:8000/). При запуске `web` ждёт готовности PostgreSQL и применяет миграции. Данные PostgreSQL хранятся в именованном volume `postgres_data` и сохраняются после `docker compose --env-file .env.docker down`.
+Сайт доступен по адресу [http://localhost:8000/](http://localhost:8000/). При запуске `web` ждёт готовности PostgreSQL, применяет миграции и собирает статику командой `collectstatic`. nginx отдаёт `/static/` из тома `staticfiles` и `/media/` из тома `media`. Запросы к страницам и формам nginx передаёт Django.
+
+База хранится в томе `postgres_data`, загруженные аватары — в томе `media`. Оба тома сохраняются после обычного `docker compose down` и при пересоздании контейнеров.
+
+### Проверка статики и аватаров
+
+1. Задайте `DJANGO_DEBUG=false` в `.env.docker` и примените настройки командой `docker compose --env-file .env.docker up -d --wait`.
+2. Откройте [главную страницу](http://localhost:8000/) и [CSS сайта](http://localhost:8000/static/core/css/styles.css). Убедитесь, что оформление и скрипты загружаются.
+3. Загрузите аватар в [настройках профиля](http://localhost:8000/profile/) и проверьте, что он отображается в профиле и шапке.
+4. Пересоздайте `web` и `nginx` командой `docker compose --env-file .env.docker up -d --force-recreate --no-deps --wait web nginx`. Откройте профиль снова и проверьте, что аватар доступен.
 
 ## Локальный запуск
 
@@ -101,7 +111,7 @@ docker compose --env-file .env.docker exec web python manage.py fill_db 2
 Установите `DJANGO_DEBUG=true` в `.env.docker` для запуска через Compose или в `.env.local` для локального запуска. При локальном запуске остановите и снова запустите `runserver`. В Compose примените изменённые переменные командой
 
 ```sh
-docker compose --env-file .env.docker up -d --wait web
+docker compose --env-file .env.docker up -d --wait
 ```
 
 1. Откройте [главную страницу](http://localhost:8000/) и выберите панель **SQL** в Django Debug Toolbar.
