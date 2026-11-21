@@ -8,12 +8,12 @@
         <span class="votes-count" data-vote-rating aria-live="polite">{{ target.rating }}</span>
         <button type="submit" name="value" value="1" class="votes-button" aria-label="Лайк"
                 aria-pressed="{% if target.user_vote == 1 %}true{% else %}false{% endif %}"
-                {% if not request.user.is_authenticated or target.user_vote == 1 %}disabled{% endif %}>
+                {% if request.user.is_authenticated %}title="Поставить или убрать лайк"{% else %}disabled{% endif %}>
             <img src="{% static 'core/img/like.png' %}" alt="">
         </button>
         <button type="submit" name="value" value="-1" class="votes-button" aria-label="Дизлайк"
                 aria-pressed="{% if target.user_vote == -1 %}true{% else %}false{% endif %}"
-                {% if not request.user.is_authenticated or target.user_vote == -1 %}disabled{% endif %}>
+                {% if request.user.is_authenticated %}title="Поставить или убрать дизлайк"{% else %}disabled{% endif %}>
             <img src="{% static 'core/img/dislike.png' %}" alt="">
         </button>
     </form>

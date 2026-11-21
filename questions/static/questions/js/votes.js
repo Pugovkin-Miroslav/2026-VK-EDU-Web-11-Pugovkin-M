@@ -15,7 +15,7 @@ document.addEventListener('submit', async (event) => {
     const rating = form.querySelector('[data-vote-rating]');
     const body = new URLSearchParams({
         id: form.elements.namedItem('id').value,
-        value: button.value,
+        value: button.getAttribute('aria-pressed') === 'true' ? '0' : button.value,
     });
     const csrfToken = form.elements.namedItem('csrfmiddlewaretoken').value;
     const fallbackError = 'Не удалось сохранить голос. Попробуйте ещё раз.';
@@ -52,8 +52,6 @@ document.addEventListener('submit', async (event) => {
         error.textContent = fallbackError;
         error.hidden = false;
     } finally {
-        buttons.forEach((voteButton) => {
-            voteButton.disabled = voteButton.getAttribute('aria-pressed') === 'true';
-        });
+        buttons.forEach((voteButton) => { voteButton.disabled = false; });
     }
 });

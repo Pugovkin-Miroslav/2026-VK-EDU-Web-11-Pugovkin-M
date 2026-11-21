@@ -40,12 +40,32 @@ class VoteTests(TestCase):
                 self.assertEqual(votes.get(user=self.reader).value, -1)
                 self.assertEqual(votes.count(), 2)
 
+    def test_removing_a_vote_recalculates_rating_and_keeps_other_votes(self):
+        self.client.force_login(self.reader)
+
+        for url, target, initial_value in (
+            ('/ajax/vote/question/', self.question, 1),
+            ('/ajax/vote/answer/', self.answer, -1),
+        ):
+            with self.subTest(url=url):
+                target.likes.create(user=self.author, value=1)
+                target.likes.create(user=self.reader, value=initial_value)
+                data = {'id': target.pk, 'value': 0}
+
+                for _ in range(2):
+                    response = self.client.post(url, data)
+                    self.assertEqual(response.status_code, 200)
+                    self.assertEqual(response.json(), {'rating': 1, 'value': 0})
+
+                self.assertFalse(target.likes.filter(user=self.reader).exists())
+                self.assertEqual(target.likes.get().user, self.author)
+
     def test_invalid_parameters_and_missing_target_return_json_errors(self):
         self.client.force_login(self.reader)
         url = '/ajax/vote/question/'
 
         for data, status in (
-            ({'id': self.question.pk, 'value': 0}, 400),
+            ({'id': self.question.pk, 'value': 2}, 400),
             ({'id': 'incorrect', 'value': -1}, 400),
             ({'id': 2**63, 'value': -1}, 400),
             ({'id': self.question.pk + 100, 'value': -1}, 404),
@@ -103,5 +123,9 @@ class VoteTests(TestCase):
 
         self.assertContains(homepage, 'action="/ajax/vote/question/"')
         self.assertContains(detail, 'action="/ajax/vote/answer/"')
-        self.assertRegex(homepage.content.decode(), r'<button[^>]+value="1"[^>]+aria-pressed="true"\s+disabled')
-        self.assertRegex(detail.content.decode(), r'<button[^>]+value="-1"[^>]+aria-pressed="true"\s+disabled')
+        self.assertRegex(
+            homepage.content.decode(), r'<button[^>]+value="1"[^>]+aria-pressed="true"\s+title="[^"]+">',
+        )
+        self.assertRegex(
+            detail.content.decode(), r'<button[^>]+value="-1"[^>]+aria-pressed="true"\s+title="[^"]+">',
+        )

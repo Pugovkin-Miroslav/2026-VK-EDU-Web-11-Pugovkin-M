@@ -94,7 +94,7 @@ class AnswerForm(forms.ModelForm):
 
 class VoteForm(forms.Form):
     id = forms.IntegerField(min_value=1, max_value=2**63 - 1)
-    value = forms.TypedChoiceField(choices=VoteValue.choices, coerce=int)
+    value = forms.TypedChoiceField(choices=[*VoteValue.choices, (0, 'Убрать голос')], coerce=int)
 
     @transaction.atomic
     def save(self, *, target_model, user):
@@ -103,12 +103,15 @@ class VoteForm(forms.Form):
             raise forms.ValidationError('Объект для голосования не найден.', code='missing_vote_target')
 
         value = self.cleaned_data['value']
-        vote, created = target.likes.get_or_create(user=user, defaults={'value': value})
-        if not created:
-            if vote.value == value:
-                raise forms.ValidationError('Вы уже поставили эту оценку.', code='duplicate_vote')
-            vote.value = value
-            vote.save(update_fields=['value'])
+        if value == 0:
+            target.likes.filter(user=user).delete()
+        else:
+            vote, created = target.likes.get_or_create(user=user, defaults={'value': value})
+            if not created:
+                if vote.value == value:
+                    raise forms.ValidationError('Вы уже поставили эту оценку.', code='duplicate_vote')
+                vote.value = value
+                vote.save(update_fields=['value'])
 
         rating = target.likes.aggregate(rating=Sum('value', default=0))['rating']
         return {'rating': rating, 'value': value}
