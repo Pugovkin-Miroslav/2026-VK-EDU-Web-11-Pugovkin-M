@@ -1,6 +1,6 @@
 from django.conf import settings
 from django.db import models
-from django.db.models import Count, OuterRef, Subquery, Value
+from django.db.models import Count, OuterRef, Subquery, Sum, Value
 from django.db.models.functions import Coalesce
 from django.urls import reverse
 from django.utils import timezone
@@ -8,15 +8,15 @@ from django.utils import timezone
 from .pagination import PAGE_SIZE
 
 
-def _count_related(model, foreign_key):
-    counts = (
+def _aggregate_related(model, foreign_key, aggregate):
+    totals = (
         model.objects.filter(**{foreign_key: OuterRef('pk')})
         .order_by()
         .values(foreign_key)
-        .annotate(total=Count('*'))
+        .annotate(total=aggregate)
         .values('total')
     )
-    return Coalesce(Subquery(counts), Value(0))
+    return Coalesce(Subquery(totals), Value(0), output_field=models.IntegerField())
 
 
 class TagManager(models.Manager):
@@ -34,8 +34,8 @@ class QuestionManager(models.Manager):
             self.select_related('author__profile')
             .prefetch_related('tags')
             .annotate(
-                rating=_count_related(QuestionLike, 'question_id'),
-                answer_count=_count_related(Answer, 'question_id'),
+                rating=_aggregate_related(QuestionLike, 'question_id', Sum('value')),
+                answer_count=_aggregate_related(Answer, 'question_id', Count('*')),
             )
         )
 
@@ -54,7 +54,7 @@ class AnswerManager(models.Manager):
         return (
             self.filter(question=question)
             .select_related('author__profile')
-            .annotate(rating=_count_related(AnswerLike, 'answer_id'))
+            .annotate(rating=_aggregate_related(AnswerLike, 'answer_id', Sum('value')))
             .order_by('created_at', 'pk')
         )
 
@@ -156,6 +156,11 @@ class Answer(models.Model):
         )
 
 
+class VoteValue(models.IntegerChoices):
+    DISLIKE = -1, 'Дизлайк'
+    LIKE = 1, 'Лайк'
+
+
 class QuestionLike(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -169,15 +174,21 @@ class QuestionLike(models.Model):
         related_name='likes',
         verbose_name='вопрос',
     )
+    value = models.SmallIntegerField('оценка', choices=VoteValue.choices, default=VoteValue.LIKE)
     created_at = models.DateTimeField('дата создания', default=timezone.now)
 
     class Meta:
-        verbose_name = 'лайк вопроса'
-        verbose_name_plural = 'лайки вопросов'
+        verbose_name = 'голос за вопрос'
+        verbose_name_plural = 'голоса за вопросы'
         unique_together = [('question', 'user')]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(value__in=VoteValue.values), name='question_like_value_valid',
+            ),
+        ]
 
     def __str__(self) -> str:
-        return f'Лайк вопроса №{self.question_id} от пользователя №{self.user_id}'
+        return f'{self.get_value_display()} вопроса №{self.question_id} от пользователя №{self.user_id}'
 
 
 class AnswerLike(models.Model):
@@ -193,12 +204,18 @@ class AnswerLike(models.Model):
         related_name='likes',
         verbose_name='ответ',
     )
+    value = models.SmallIntegerField('оценка', choices=VoteValue.choices, default=VoteValue.LIKE)
     created_at = models.DateTimeField('дата создания', default=timezone.now)
 
     class Meta:
-        verbose_name = 'лайк ответа'
-        verbose_name_plural = 'лайки ответов'
+        verbose_name = 'голос за ответ'
+        verbose_name_plural = 'голоса за ответы'
         unique_together = [('answer', 'user')]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(value__in=VoteValue.values), name='answer_like_value_valid',
+            ),
+        ]
 
     def __str__(self) -> str:
-        return f'Лайк ответа №{self.answer_id} от пользователя №{self.user_id}'
+        return f'{self.get_value_display()} ответа №{self.answer_id} от пользователя №{self.user_id}'

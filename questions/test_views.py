@@ -1,7 +1,7 @@
 from datetime import timedelta
 
 from django.contrib.auth import get_user_model
-from django.db import connection
+from django.db import IntegrityError, connection, transaction
 from django.test import Client, TestCase
 from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
@@ -217,6 +217,39 @@ class QuestionViewsTests(TestCase):
         question = response.context['question']
         self.assertEqual((question.rating, question.answer_count), (2, 2))
         self.assertEqual([answer.rating for answer in response.context['page_obj']], [1, 0])
+
+    def test_hot_ranks_questions_by_signed_votes(self):
+        for vote in QuestionLike.objects.filter(question=self.old):
+            vote.value = -1
+            vote.save()
+
+        response = self.client.get(reverse('questions:hot'))
+
+        self.assertEqual(
+            [(question.pk, question.rating) for question in response.context['page_obj']],
+            [(self.new.pk, 0), (self.old.pk, -2)],
+        )
+
+    def test_answer_ratings_sum_likes_and_dislikes(self):
+        for answer in (self.first_answer, self.second_answer):
+            vote = AnswerLike(answer=answer, user=self.reader)
+            vote.value = -1
+            vote.save()
+
+        response = self.client.get(self.old.get_absolute_url())
+
+        self.assertEqual([answer.rating for answer in response.context['page_obj']], [0, -1])
+        self.assertEqual(response.context['question'].answer_count, 2)
+
+    def test_database_checks_question_and_answer_vote_values(self):
+        for vote in (
+            QuestionLike(question=self.new, user=self.reader),
+            AnswerLike(answer=self.second_answer, user=self.reader),
+        ):
+            with self.subTest(model=type(vote).__name__):
+                vote.value = 0
+                with self.assertRaises(IntegrityError), transaction.atomic():
+                    vote.save()
 
     def test_existing_empty_tag_and_question_show_empty_states(self):
         Tag.objects.create(name='Пустой тег', slug='empty')
